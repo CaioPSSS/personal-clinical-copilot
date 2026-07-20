@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,12 +40,24 @@ export function StepChat({
     content: m.content,
   }));
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } =
-    useChat({
+  const [input, setInput] = useState('');
+
+  const { messages, status, setMessages, sendMessage } = useChat({
+    transport: new DefaultChatTransport({
       api: '/api/chat',
       body: { patientId },
-      initialMessages: dbMessages,
-    });
+    }),
+    initialMessages: dbMessages,
+  });
+
+  const isLoading = status === 'submitted' || status === 'streaming';
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!input.trim()) return;
+    sendMessage({ text: input });
+    setInput('');
+  };
 
   // Auto-scroll para a última mensagem
   useEffect(() => {
@@ -56,7 +69,7 @@ export function StepChat({
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e as unknown as React.FormEvent<HTMLFormElement>);
+      handleSubmit();
     }
   }
 
@@ -163,7 +176,7 @@ export function StepChat({
           <form onSubmit={handleSubmit} className="flex gap-2 pt-3 border-t border-border/50">
             <Textarea
               value={input}
-              onChange={handleInputChange}
+              onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Pergunte sobre o caso clínico..."
               rows={1}
