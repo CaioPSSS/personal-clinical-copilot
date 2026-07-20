@@ -37,7 +37,7 @@ export function StepChat({
   const dbMessages = initialMessages.map((m) => ({
     id: m.id,
     role: m.role as 'user' | 'assistant',
-    content: m.content,
+    parts: [{ type: 'text' as const, text: m.content }],
   }));
 
   const [input, setInput] = useState('');
@@ -47,7 +47,7 @@ export function StepChat({
       api: '/api/chat',
       body: { patientId },
     }),
-    initialMessages: dbMessages,
+    messages: dbMessages,
   });
 
   const isLoading = status === 'submitted' || status === 'streaming';
@@ -143,7 +143,9 @@ export function StepChat({
                     }`}
                   >
                     <div className="prose-medical whitespace-pre-wrap leading-relaxed">
-                      {message.content}
+                      {message.parts
+                        .map((p) => (p.type === 'text' ? p.text : ''))
+                        .join('')}
                     </div>
                   </div>
 
