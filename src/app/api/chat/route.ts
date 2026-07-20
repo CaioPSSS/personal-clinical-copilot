@@ -10,6 +10,21 @@ const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
 });
 
+// Custom proxy para lidar com falhas de rate limit no Vercel AI SDK
+function withFallback(primary: any, fallbackModel: any): any {
+  return {
+    ...primary,
+    async doGenerate(options: any) {
+      try { return await primary.doGenerate(options); } 
+      catch (err) { return await fallbackModel.doGenerate(options); }
+    },
+    async doStream(options: any) {
+      try { return await primary.doStream(options); } 
+      catch (err) { return await fallbackModel.doStream(options); }
+    }
+  };
+}
+
 export async function POST(req: Request) {
   try {
     const { messages, patientId } = await req.json();
@@ -58,7 +73,10 @@ export async function POST(req: Request) {
     );
 
     const result = streamText({
-      model: openrouter.chat('google/gemma-4-31b-it:free'),
+      model: withFallback(
+        openrouter.chat('google/gemma-4-31b-it:free'),
+        openrouter.chat('google/gemma-4-26b-a4b-it:free')
+      ),
       system: systemPrompt,
       messages,
       tools: {
