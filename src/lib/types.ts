@@ -55,7 +55,7 @@ export interface EvidenceNote {
   patient_id: string;
   content: string;
   reasoning: string | null;
-  references: Record<string, unknown>[];
+  search_references: { title: string; url: string }[] | null;
   created_at: string;
 }
 

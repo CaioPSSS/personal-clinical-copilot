@@ -89,53 +89,88 @@ export async function POST(req: Request) {
       tools: {
         searchMedicalGuidelines: tool({
           description:
-            'Busca diretrizes médicas e evidências clínicas atualizadas na internet. Use para fundamentar diagnósticos e condutas.',
+            'Busca diretrizes médicas e evidências clínicas atualizadas na internet. De preferência a fontes como medway.com.br, sanarmed.com, med.estrategiamed.com, artmed.com.br e diretrizes oficiais. Sinta-se livre para pesquisar os termos em inglês (ex: "UpToDate heart failure guidelines") se precisar de literatura global mais profunda, traduzindo mentalmente os resultados para sua resposta. Use para fundamentar diagnósticos e condutas.',
           parameters: z.object({
-            query: z
-              .string()
+            queries: z
+              .array(z.string())
               .describe(
-                'A consulta de busca em português. Ex: "diretriz pneumonia adquirida comunidade 2024"'
+                'Lista de consultas de busca em português ou inglês (ex: ["diretriz IAM SBC 2024", "UpToDate pneumonia treatment"])'
               ),
           }),
-          execute: async ({ query }: { query: string }) => {
+          execute: async ({ queries }: { queries: string[] }) => {
+            console.log('\n\n=========================================');
+            console.log('🔍 [TOOL CALL] A IA DECIDIU BUSCAR NA INTERNET!');
+            console.log('Queries pesquisadas:', queries);
+            console.log('=========================================\n\n');
+            
             try {
-              const res = await fetch('https://api.tavily.com/search', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  api_key: process.env.TAVILY_API_KEY,
-                  query: query,
-                  search_depth: 'advanced',
-                  max_results: 5,
-                  include_answer: true,
-                }),
-              });
-              const data = await res.json();
-              return {
-                answer: data.answer || '',
-                results: (data.results || []).map(
-                  (r: { title: string; url: string; content: string }) => ({
+              const fetchPromises = queries.map(query => 
+                fetch('https://api.tavily.com/search', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    api_key: process.env.TAVILY_API_KEY,
+                    query: query,
+                    search_depth: 'advanced',
+                    max_results: 3,
+                    include_answer: true,
+                  }),
+                }).then(r => r.json())
+              );
+
+              const resultsData = await Promise.all(fetchPromises);
+              
+              let combinedAnswer = '';
+              const allResults: any[] = [];
+              
+              resultsData.forEach((data, index) => {
+                if (data.answer) combinedAnswer += `[Query: ${queries[index]}]: ${data.answer}\n`;
+                if (data.results) {
+                  const mapped = data.results.map((r: any) => ({
                     title: r.title,
                     url: r.url,
-                    snippet: r.content?.slice(0, 300),
-                  })
-                ),
+                    snippet: r.content?.slice(0, 2000), // Aumentado para 2000 caracteres!
+                  }));
+                  allResults.push(...mapped);
+                }
+              });
+
+              return {
+                answer: combinedAnswer,
+                results: allResults,
               };
-            } catch {
+            } catch (err) {
+              console.error('Erro na busca Tavily:', err);
               return { answer: 'Erro na busca.', results: [] };
             }
           },
         } as any),
       },
+      toolChoice: 'required',
       maxSteps: 5,
-      onFinish: async ({ text }: { text: string }) => {
+      onFinish: async ({ text, toolResults }: any) => {
+        // Extrair todas as URLs encontradas nas pesquisas para salvar
+        const searchReferences: { title: string; url: string }[] = [];
+        if (toolResults) {
+          for (const tr of toolResults) {
+            if (tr.toolName === 'searchMedicalGuidelines' && tr.result?.results) {
+              for (const r of tr.result.results) {
+                // Evitar duplicatas
+                if (!searchReferences.some(sr => sr.url === r.url)) {
+                  searchReferences.push({ title: r.title, url: r.url });
+                }
+              }
+            }
+          }
+        }
+
         // Salvar evidence note no banco
         await supabase.from('evidence_notes').insert({
           user_id: user.id,
           patient_id: patientId,
           content: text,
           reasoning: null,
-          search_references: [],
+          search_references: searchReferences,
         });
       },
     } as any);
