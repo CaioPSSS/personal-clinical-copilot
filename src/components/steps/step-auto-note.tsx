@@ -16,12 +16,13 @@ import {
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { MedicalRecord, Transcription } from '@/lib/types';
+import { MedicalRecord, Transcription, FileRecord } from '@/lib/types';
 
 interface StepAutoNoteProps {
   patientId: string;
   medicalRecord: MedicalRecord | null;
   transcriptions: Transcription[];
+  files: FileRecord[];
   onDataChange: () => void;
 }
 
@@ -43,6 +44,7 @@ export function StepAutoNote({
   patientId,
   medicalRecord,
   transcriptions,
+  files,
   onDataChange,
 }: StepAutoNoteProps) {
   const [generated, setGenerated] = useState(false);
@@ -50,6 +52,7 @@ export function StepAutoNote({
   const [isSaving, setIsSaving] = useState(false);
 
   const pendingTranscriptions = transcriptions.filter((t) => !t.processed);
+  const pendingFiles = files?.filter((f) => !f.processed && f.file_type.startsWith('image')) || [];
 
   const { completion, isLoading, complete } = useCompletion({
     api: '/api/generate-note',
@@ -72,7 +75,7 @@ export function StepAutoNote({
         body: JSON.stringify({
           patientId,
           text: editedNote,
-          hasTranscriptions: pendingTranscriptions.length > 0,
+          hasTranscriptions: pendingTranscriptions.length > 0 || pendingFiles.length > 0,
         }),
       });
       if (!res.ok) throw new Error('Falha ao salvar');
@@ -94,10 +97,13 @@ export function StepAutoNote({
       .map((t) => t.transcript_text)
       .join('\n\n---\n\n');
 
+    const imagePaths = pendingFiles.map((f) => f.storage_path);
+
     await complete(allPendingText, {
       body: {
         patientId,
         transcriptionText: allPendingText || null,
+        imagePaths: imagePaths.length > 0 ? imagePaths : null,
       },
     });
   }

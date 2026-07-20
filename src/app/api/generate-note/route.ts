@@ -29,7 +29,7 @@ function withFallback(primary: any, fallbackModel: any): any {
 
 export async function POST(req: Request) {
   try {
-    const { patientId, transcriptionText, imageDescription } = await req.json();
+    const { patientId, transcriptionText, imagePaths } = await req.json();
 
     const supabase = await createClient();
     const {
@@ -60,19 +60,53 @@ export async function POST(req: Request) {
         .join('\n\n');
     }
 
-    const userPrompt = buildAutoNoteUserPrompt(
+    // Processar imagens pendentes, se houver
+    const publicImageUrls: string[] = [];
+    if (imagePaths && imagePaths.length > 0) {
+      for (const path of imagePaths) {
+        // Gerar URL assinada válida por 1 hora para o OpenRouter poder ler
+        const { data, error } = await supabase.storage
+          .from('medical-files')
+          .createSignedUrl(path, 3600);
+        
+        if (data?.signedUrl) {
+          publicImageUrls.push(data.signedUrl);
+        } else if (error) {
+          console.error('Erro ao gerar url assinada:', error);
+        }
+      }
+    }
+
+    const userPromptText = buildAutoNoteUserPrompt(
       currentRecordText,
       transcriptionText || null,
-      imageDescription || null
+      null
     );
+
+    // Montar as mensagens com suporte multimodal
+    const contentParts: any[] = [{ type: 'text', text: userPromptText }];
+    
+    for (const url of publicImageUrls) {
+      contentParts.push({ type: 'image', image: new URL(url) });
+    }
+
+    const messages: any[] = [
+      {
+        role: 'system',
+        content: AUTO_NOTE_SYSTEM_PROMPT,
+      },
+      {
+        role: 'user',
+        content: contentParts,
+      }
+    ];
 
     const result = streamText({
       model: withFallback(
         openrouter.chat('google/gemma-4-31b-it:free'),
         openrouter.chat('google/gemma-4-26b-a4b-it:free')
       ),
-      system: AUTO_NOTE_SYSTEM_PROMPT,
-      prompt: userPrompt,
+      messages: messages,
       onFinish: async ({ text }) => {
         // Agora o salvamento é feito no frontend após confirmação do usuário
         console.log('Geração concluída. Aguardando revisão do usuário.');

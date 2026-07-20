@@ -13,6 +13,9 @@ import {
   Square,
   Keyboard,
   Send,
+  Trash2,
+  Image as ImageIcon,
+  FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -202,7 +205,48 @@ export function StepUpload({
     }
   }
 
+  async function deleteFile(fileId: string, storagePath: string) {
+    if (!confirm('Deseja realmente remover este arquivo?')) return;
+    try {
+      const res = await fetch('/api/delete-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileId, storagePath }),
+      });
+      if (res.ok) {
+        toast.success('Arquivo removido com sucesso!');
+        onDataChange();
+      } else {
+        toast.error('Erro ao remover arquivo.');
+      }
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    }
+  }
+
+  async function deleteTranscription(transcriptionId: string) {
+    if (!confirm('Deseja realmente remover esta anotação?')) return;
+    try {
+      const res = await fetch('/api/delete-transcription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcriptionId }),
+      });
+      if (res.ok) {
+        toast.success('Anotação removida com sucesso!');
+        onDataChange();
+      } else {
+        toast.error('Erro ao remover anotação.');
+      }
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    }
+  }
+
   const pendingTranscriptions = transcriptions.filter((t) => !t.processed);
+  const processedTranscriptions = transcriptions.filter((t) => t.processed);
+  const pendingFiles = files.filter((f) => !f.processed);
+  const processedFiles = files.filter((f) => f.processed);
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -303,7 +347,70 @@ export function StepUpload({
         </Card>
       </div>
 
-      {/* Status */}
+      {/* Lista de Anexos */}
+      {(transcriptions.length > 0 || files.length > 0) && (
+        <Card className="border-border">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm">Anexos e Anotações da Consulta</CardTitle>
+          </CardHeader>
+          <CardContent className="py-0 pb-4">
+            <div className="space-y-2">
+              {files.map((f) => (
+                <div key={f.id} className="flex items-center justify-between p-3 rounded-lg border bg-card text-sm group">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    {f.file_type.startsWith('image') ? (
+                      <ImageIcon className="w-4 h-4 text-primary shrink-0" />
+                    ) : (
+                      <FileAudio className="w-4 h-4 text-primary shrink-0" />
+                    )}
+                    <span className="truncate">{f.file_name}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge variant={f.processed ? 'secondary' : 'default'} className="text-[10px]">
+                      {f.processed ? 'Incluído' : 'Pendente'}
+                    </Badge>
+                    {!f.processed && (
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteFile(f.id, f.storage_path)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {transcriptions.map((t) => (
+                <div key={t.id} className="flex items-center justify-between p-3 rounded-lg border bg-card text-sm group">
+                  <div className="flex flex-col overflow-hidden max-w-[70%]">
+                    <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
+                      {t.audio_file_path?.includes('Texto Digitado') ? (
+                        <Keyboard className="w-3 h-3" />
+                      ) : (
+                        <FileText className="w-3 h-3" />
+                      )}
+                      <span className="truncate">{t.audio_file_path}</span>
+                      <span>•</span>
+                      <span>{formatRelativeTime(new Date(t.created_at))}</span>
+                    </div>
+                    <span className="text-xs truncate">{t.transcript_text}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge variant={t.processed ? 'secondary' : 'default'} className="text-[10px]">
+                      {t.processed ? 'Incluído' : 'Pendente'}
+                    </Badge>
+                    {!t.processed && (
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteTranscription(t.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Uploading Overlay */}
       {(uploading || transcribing) && (
         <Card className="border-primary/30">
           <CardContent className="flex items-center gap-3 py-4">

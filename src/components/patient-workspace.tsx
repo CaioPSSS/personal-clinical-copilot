@@ -49,7 +49,13 @@ export function PatientWorkspace({
   const [transcriptions, setTranscriptions] = useState(initialTranscriptions);
   const [evidenceNote, setEvidenceNote] = useState(initialEvidenceNote);
   const [chatMessages, setChatMessages] = useState(initialChatMessages);
-  const [files, setFiles] = useState(initialFiles);
+  const [files, setFiles] = useState(() => {
+    const recordDate = initialRecord ? new Date(initialRecord.updated_at).getTime() : 0;
+    return initialFiles.map(f => ({
+      ...f,
+      processed: new Date(f.created_at).getTime() < recordDate
+    }));
+  });
 
   const supabase = createClient();
 
@@ -91,7 +97,14 @@ export function PatientWorkspace({
     if (transcRes.data) setTranscriptions(transcRes.data as Transcription[]);
     if (evidenceRes.data) setEvidenceNote(evidenceRes.data as EvidenceNote);
     if (messagesRes.data) setChatMessages(messagesRes.data as ChatMessage[]);
-    if (filesRes.data) setFiles(filesRes.data as FileRecord[]);
+    if (filesRes.data) {
+      const dbFiles = filesRes.data as FileRecord[];
+      const recordDate = recordRes.data ? new Date((recordRes.data as MedicalRecord).updated_at).getTime() : 0;
+      setFiles(dbFiles.map(f => ({
+        ...f,
+        processed: new Date(f.created_at).getTime() < recordDate
+      })));
+    }
   }, [patient.id, supabase]);
 
   const age = patient.date_of_birth
@@ -162,6 +175,7 @@ export function PatientWorkspace({
             patientId={patient.id}
             medicalRecord={medicalRecord}
             transcriptions={transcriptions}
+            files={files}
             onDataChange={refreshData}
           />
         </TabsContent>

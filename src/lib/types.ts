@@ -77,5 +77,6 @@ export interface FileRecord {
   file_size: number | null;
   storage_path: string;
   category: 'audio' | 'image' | 'document';
+  processed?: boolean;
   created_at: string;
 }
