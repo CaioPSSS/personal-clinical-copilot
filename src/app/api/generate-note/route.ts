@@ -6,7 +6,7 @@ import {
   buildAutoNoteUserPrompt,
 } from '@/lib/prompts/auto-note';
 
-export const maxDuration = 600;
+export const maxDuration = 300;
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
@@ -17,11 +17,11 @@ function withFallback(primary: any, fallbackModel: any): any {
   return {
     ...primary,
     async doGenerate(options: any) {
-      try { return await primary.doGenerate(options); } 
+      try { return await primary.doGenerate(options); }
       catch (err) { return await fallbackModel.doGenerate(options); }
     },
     async doStream(options: any) {
-      try { return await primary.doStream(options); } 
+      try { return await primary.doStream(options); }
       catch (err) { return await fallbackModel.doStream(options); }
     }
   };
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
         const { data, error } = await supabase.storage
           .from('medical-files')
           .createSignedUrl(path, 3600);
-        
+
         if (data?.signedUrl) {
           publicImageUrls.push(data.signedUrl);
         } else if (error) {
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
 
     // Montar as mensagens com suporte multimodal
     const contentParts: any[] = [{ type: 'text', text: userPromptText }];
-    
+
     for (const url of publicImageUrls) {
       contentParts.push({ type: 'image', image: new URL(url) });
     }

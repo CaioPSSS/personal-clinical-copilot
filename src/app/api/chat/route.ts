@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { buildChatSystemPrompt } from '@/lib/prompts/chat';
 
-export const maxDuration = 600;
+export const maxDuration = 300;
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
@@ -15,11 +15,11 @@ function withFallback(primary: any, fallbackModel: any): any {
   return {
     ...primary,
     async doGenerate(options: any) {
-      try { return await primary.doGenerate(options); } 
+      try { return await primary.doGenerate(options); }
       catch (err) { return await fallbackModel.doGenerate(options); }
     },
     async doStream(options: any) {
-      try { return await primary.doStream(options); } 
+      try { return await primary.doStream(options); }
       catch (err) { return await fallbackModel.doStream(options); }
     }
   };
@@ -102,30 +102,30 @@ export async function POST(req: Request) {
           }),
           execute: async ({ query }: { query: string }) => {
             try {
-               const res = await fetch('https://api.tavily.com/search', {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({
-                   api_key: process.env.TAVILY_API_KEY,
-                   query,
-                   search_depth: 'basic',
-                   max_results: 3,
-                   include_answer: true,
-                 }),
-               });
-               const data = await res.json();
-               return {
-                 answer: data.answer || '',
-                 results: (data.results || []).map(
-                   (r: { title: string; url: string; content: string }) => ({
-                     title: r.title,
-                     url: r.url,
-                     snippet: r.content?.slice(0, 200),
-                   })
-                 ),
-               };
+              const res = await fetch('https://api.tavily.com/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  api_key: process.env.TAVILY_API_KEY,
+                  query,
+                  search_depth: 'basic',
+                  max_results: 3,
+                  include_answer: true,
+                }),
+              });
+              const data = await res.json();
+              return {
+                answer: data.answer || '',
+                results: (data.results || []).map(
+                  (r: { title: string; url: string; content: string }) => ({
+                    title: r.title,
+                    url: r.url,
+                    snippet: r.content?.slice(0, 200),
+                  })
+                ),
+              };
             } catch {
-               return { answer: 'Erro na busca.', results: [] };
+              return { answer: 'Erro na busca.', results: [] };
             }
           },
         } as any,
