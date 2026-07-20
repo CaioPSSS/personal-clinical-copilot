@@ -20,6 +20,9 @@ import {
   Mic,
   Square,
   FileEdit,
+  Globe,
+  Search,
+  CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { MedicalRecord, EvidenceNote, ChatMessage } from '@/lib/types';
@@ -201,7 +204,7 @@ export function StepChat({
                         : 'bg-muted/50'
                     }`}
                   >
-                    <div className={`prose-medical prose-sm whitespace-pre-wrap leading-relaxed ${message.role === 'user' ? 'text-primary-foreground prose-invert' : 'dark:prose-invert'}`}>
+                    <div className={`prose-medical prose-sm leading-relaxed ${message.role === 'user' ? 'text-primary-foreground prose-invert' : 'dark:prose-invert'}`}>
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {message.parts
                           .map((p) => (p.type === 'text' ? p.text : ''))
@@ -225,37 +228,78 @@ export function StepChat({
                 (message.parts || []).map((part) => {
                   if (part.type === 'tool-invocation') {
                     const toolInvocation = part as any;
-                    const { toolName, toolCallId, state, args } = toolInvocation;
+                    const { toolName, toolCallId, state, args, result } = toolInvocation;
+                    
+                    if (toolName === 'searchMedicalInfo') {
+                      const parsedArgs = typeof args === 'string' ? JSON.parse(args) : args;
+                      return (
+                        <div key={toolCallId} className="flex justify-start ml-11 mb-4">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-full border border-border/50">
+                            {state === 'result' ? (
+                              <Globe className="w-3.5 h-3.5 text-blue-500" />
+                            ) : (
+                              <Search className="w-3.5 h-3.5 animate-pulse text-blue-500" />
+                            )}
+                            <span>
+                              {state === 'result' ? 'A IA pesquisou no Perplexity por:' : 'Pesquisando na web por:'} <strong className="font-medium">"{parsedArgs.query}"</strong>
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+
                     if (toolName === 'proposeRecordEdit') {
                       const parsedArgs = typeof args === 'string' ? JSON.parse(args) : args;
                       return (
                         <div key={toolCallId} className="flex justify-start ml-11 mb-4">
-                          <Card className="w-full max-w-[90%] border-yellow-500/30 bg-yellow-500/5">
-                            <CardContent className="p-4">
-                              <h4 className="text-sm font-semibold text-yellow-600 mb-2 flex items-center gap-1.5">
-                                <FileEdit className="w-4 h-4" /> Proposta de Edição: {parsedArgs.section}
+                          <Card className="w-full max-w-[95%] border-blue-500/20 bg-blue-500/5 shadow-sm overflow-hidden">
+                            <div className="bg-blue-500/10 px-4 py-2 border-b border-blue-500/20 flex items-center gap-2">
+                              <FileEdit className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                              <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300">
+                                Proposta de Atualização: {parsedArgs.section}
                               </h4>
-                              <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-                                {parsedArgs.reason}
-                              </p>
-                              <div className="bg-background/80 p-3 rounded-md border border-border/50 text-xs font-mono mb-4 max-h-48 overflow-y-auto whitespace-pre-wrap">
-                                {parsedArgs.newContent}
+                            </div>
+                            <CardContent className="p-4">
+                              <div className="mb-4">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">
+                                  Justificativa da IA
+                                </span>
+                                <p className="text-sm text-foreground/80 leading-relaxed bg-background/50 p-2.5 rounded-md border border-border/50">
+                                  {parsedArgs.reason}
+                                </p>
+                              </div>
+                              
+                              <div className="mb-4">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">
+                                  Novo Conteúdo Proposto
+                                </span>
+                                <div className="bg-background p-3 rounded-md border border-border/50 text-sm font-mono text-muted-foreground max-h-48 overflow-y-auto whitespace-pre-wrap">
+                                  {parsedArgs.newContent}
+                                </div>
                               </div>
                               
                               {state === 'result' ? (
-                                <div className={`text-xs font-medium px-3 py-2 rounded-md ${
+                                <div className={`text-sm font-medium px-4 py-2.5 rounded-md flex items-center justify-center gap-2 ${
                                   (toolInvocation as any).result?.approved 
-                                    ? 'bg-green-500/10 text-green-600' 
-                                    : 'bg-red-500/10 text-red-600'
+                                    ? 'bg-green-500/10 text-green-600 border border-green-500/20' 
+                                    : 'bg-red-500/10 text-red-600 border border-red-500/20'
                                 }`}>
-                                  {(toolInvocation as any).result?.approved ? '✅ Edição Aprovada e Aplicada' : '❌ Edição Recusada'}
+                                  {(toolInvocation as any).result?.approved ? (
+                                    <><CheckCircle2 className="w-4 h-4" /> Edição Aprovada e Aplicada</>
+                                  ) : (
+                                    <><Trash2 className="w-4 h-4" /> Edição Recusada</>
+                                  )}
                                 </div>
                               ) : (
-                                <div className="flex gap-2">
+                                <div className="flex gap-3">
                                   <Button
                                     size="sm"
-                                    className="bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
-                                    onClick={async () => {
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                                    onClick={async (e) => {
+                                      const btn = e.currentTarget;
+                                      btn.disabled = true;
+                                      const originalText = btn.innerText;
+                                      btn.innerHTML = '<span class="animate-pulse">Aplicando...</span>';
                                       toast.loading('Aplicando edição...', { id: 'edit-record' });
                                       try {
                                         const res = await fetch('/api/edit-record-section', {
@@ -275,15 +319,17 @@ export function StepChat({
                                         }
                                       } catch (err) {
                                         toast.error('Erro ao atualizar o prontuário.', { id: 'edit-record' });
+                                        btn.disabled = false;
+                                        btn.innerText = originalText;
                                       }
                                     }}
                                   >
-                                    Aprovar e Aplicar
+                                    Aprovar Atualização
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="h-8 text-xs bg-background"
+                                    className="flex-1 bg-background hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-colors"
                                     onClick={() => addToolResult({ toolCallId, result: { approved: false } } as any)}
                                   >
                                     Recusar
@@ -316,44 +362,50 @@ export function StepChat({
           </ScrollArea>
 
           {/* Input */}
-          <form onSubmit={handleSubmit} className="flex gap-2 pt-3 border-t border-border/50">
-            <div className="flex flex-col flex-1 relative">
-              {isRecording && (
-                <div className="absolute -top-8 left-0 right-0 text-center text-xs text-red-500 font-medium animate-pulse flex items-center justify-center gap-1">
-                  <Mic className="w-3 h-3" /> Gravando áudio (Solte o botão do microfone para enviar)
-                </div>
-              )}
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Pergunte ou peça para editar o prontuário..."
-                rows={1}
-                className="resize-none min-h-[44px] max-h-[120px]"
-                disabled={isRecording}
-              />
-            </div>
-            
-            <div className="flex flex-col gap-2 shrink-0">
-              <Button
-                type="button"
-                size="icon"
-                variant={isRecording ? "destructive" : "secondary"}
-                onClick={isRecording ? stopRecording : startRecording}
-                className="shrink-0"
-              >
-                {isRecording ? <Square className="w-4 h-4 fill-current" /> : <Mic className="w-4 h-4" />}
-              </Button>
+          {/* Footer com input */}
+          <div className="p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t">
+            <form
+              onSubmit={handleSubmit}
+              className="flex flex-col sm:flex-row gap-3 relative"
+            >
+              <div className="relative flex-1 group">
+                <Textarea
+                  placeholder="Ex: Como devo ajustar a dose do antibiótico?"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="min-h-[52px] w-full resize-none pr-12 rounded-xl border-muted-foreground/20 focus-visible:ring-1 focus-visible:ring-primary/50 shadow-sm transition-all"
+                  rows={1}
+                  disabled={isLoading}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg transition-all ${
+                    isRecording 
+                      ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20 animate-pulse' 
+                      : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
+                  }`}
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={isLoading}
+                >
+                  {isRecording ? <Square className="w-4 h-4 fill-current" /> : <Mic className="w-4 h-4" />}
+                </Button>
+              </div>
               <Button
                 type="submit"
-                size="icon"
-                disabled={isLoading || !input.trim() || isRecording}
-                className="shrink-0 gradient-primary text-white hover:opacity-90"
+                disabled={isLoading || !input.trim()}
+                className="h-[52px] sm:w-14 rounded-xl shadow-sm transition-all"
               >
-                <Send className="w-4 h-4" />
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
               </Button>
-            </div>
-          </form>
+            </form>
+          </div>
         </CardContent>
       </Card>
     </div>

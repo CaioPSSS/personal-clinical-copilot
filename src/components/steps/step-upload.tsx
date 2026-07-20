@@ -209,8 +209,11 @@ export function StepUpload({
     }
   }
 
-  async function deleteFile(fileId: string, storagePath: string) {
-    if (!confirm('Deseja realmente remover este arquivo?')) return;
+  async function deleteFile(fileId: string, storagePath: string, processed: boolean) {
+    const confirmMsg = processed
+      ? 'Este arquivo já foi incorporado ao prontuário. Removê-lo fará com que ele suma dos anexos da consulta, mas não altera o prontuário atual. Deseja continuar?'
+      : 'Deseja realmente remover este arquivo?';
+    if (!confirm(confirmMsg)) return;
     try {
       const res = await fetch('/api/delete-file', {
         method: 'POST',
@@ -228,8 +231,11 @@ export function StepUpload({
     }
   }
 
-  async function deleteTranscription(transcriptionId: string) {
-    if (!confirm('Deseja realmente remover esta anotação?')) return;
+  async function deleteTranscription(transcriptionId: string, processed: boolean) {
+    const confirmMsg = processed
+      ? 'Esta anotação já foi incorporada ao prontuário. Removê-la fará com que ela suma das anotações da consulta, mas não altera o prontuário atual. Deseja continuar?'
+      : 'Deseja realmente remover esta anotação?';
+    if (!confirm(confirmMsg)) return;
     try {
       const res = await fetch('/api/delete-transcription', {
         method: 'POST',
@@ -393,11 +399,9 @@ export function StepUpload({
                     <Badge variant={f.processed ? 'secondary' : 'default'} className="text-[10px]">
                       {f.processed ? 'Incluído' : 'Pendente'}
                     </Badge>
-                    {!f.processed && (
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteFile(f.id, f.storage_path)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteFile(f.id, f.storage_path, !!f.processed)}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -419,12 +423,12 @@ export function StepUpload({
                       <Badge variant={t.processed ? 'secondary' : 'default'} className="text-[10px]">
                         {t.processed ? 'Incluído' : 'Pendente'}
                       </Badge>
-                      {!t.processed && editingId !== t.id && (
+                      {editingId !== t.id && (
                         <>
                           <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { setEditingId(t.id); setEditValue(t.transcript_text); }}>
                             <Pencil className="w-3 h-3" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteTranscription(t.id)}>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteTranscription(t.id, t.processed)}>
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         </>

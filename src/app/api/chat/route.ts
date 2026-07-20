@@ -111,40 +111,10 @@ export async function POST(req: Request) {
           }),
           // Não possui execute no servidor. Será enviado ao cliente para confirmação.
         } as any,
-        searchMedicalInfo: {
-          description: 'Busca informações médicas na internet.',
-          parameters: z.object({
-            query: z.string().describe('Consulta de busca médica em português'),
-          }),
-          execute: async ({ query }: { query: string }) => {
-            try {
-              const res = await fetch('https://api.tavily.com/search', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  api_key: process.env.TAVILY_API_KEY,
-                  query,
-                  search_depth: 'basic',
-                  max_results: 3,
-                  include_answer: true,
-                }),
-              });
-              const data = await res.json();
-              return {
-                answer: data.answer || '',
-                results: (data.results || []).map(
-                  (r: { title: string; url: string; content: string }) => ({
-                    title: r.title,
-                    url: r.url,
-                    snippet: r.content?.slice(0, 200),
-                  })
-                ),
-              };
-            } catch {
-              return { answer: 'Erro na busca.', results: [] };
-            }
-          },
-        } as any,
+        searchMedicalInfo: openrouter.tools.webSearch({
+          engine: 'perplexity',
+          maxResults: 3,
+        } as any),
       },
       maxSteps: 3,
       onFinish: async ({ text }: { text: string }) => {

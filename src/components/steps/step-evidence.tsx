@@ -127,7 +127,7 @@ export function StepEvidence({
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[600px]">
-              <div className="prose-medical prose-sm text-sm whitespace-pre-wrap dark:prose-invert">
+              <div className="prose-medical prose-sm text-sm dark:prose-invert">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
               </div>
             </ScrollArea>

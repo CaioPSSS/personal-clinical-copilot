@@ -237,7 +237,7 @@ export function StepAutoNote({
                       <h3 className="text-sm font-semibold text-primary mb-1">
                         {label}
                       </h3>
-                      <div className="prose-medical prose-sm text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed dark:prose-invert">
+                      <div className="prose-medical prose-sm text-sm text-foreground/80 leading-relaxed dark:prose-invert">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
                       </div>
                     </div>
