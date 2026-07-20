@@ -89,12 +89,12 @@ export async function POST(req: Request) {
       tools: {
         searchMedicalGuidelines: openrouter.tools.webSearch({
           engine: 'exa',
-          maxResults: 5,
-          searchContextSize: 'medium',
+          maxResults: 4,
+          maxCharacters: 4000,
         } as any),
       },
       toolChoice: 'required',
-      maxSteps: 5,
+      maxSteps: 3,
       onFinish: async ({ text, toolResults }: any) => {
         // Extrair todas as URLs encontradas nas pesquisas para salvar
         const searchReferences: { title: string; url: string }[] = [];
