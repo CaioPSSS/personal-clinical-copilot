@@ -108,11 +108,13 @@ export function Sidebar({ userEmail }: SidebarProps) {
       {/* Mobile hamburger */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="glass">
-              <Menu className="w-5 h-5" />
-            </Button>
-          </SheetTrigger>
+          <SheetTrigger
+            render={
+              <Button variant="outline" size="icon" className="glass">
+                <Menu className="w-5 h-5" />
+              </Button>
+            }
+          />
           <SheetContent side="left" className="w-64 p-0 border-r-border/50">
             <SidebarContent userEmail={userEmail} />
           </SheetContent>

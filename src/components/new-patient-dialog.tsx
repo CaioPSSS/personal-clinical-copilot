@@ -45,12 +45,14 @@ export function NewPatientDialog({ onCreated }: NewPatientDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="gradient-primary text-white hover:opacity-90">
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Paciente
-        </Button>
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          <Button className="gradient-primary text-white hover:opacity-90">
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Paciente
+          </Button>
+        }
+      />
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Novo Paciente</DialogTitle>
