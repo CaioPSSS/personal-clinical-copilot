@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "src/app/api/transcribe/route.ts": { "maxDuration": 60 },
+    "src/app/api/generate-note/route.ts": { "maxDuration": 60 },
+    "src/app/api/generate-conduct/route.ts": { "maxDuration": 60 },
+    "src/app/api/chat/route.ts": { "maxDuration": 60 }
+  }
+}
