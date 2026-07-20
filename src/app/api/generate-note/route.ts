@@ -1,5 +1,5 @@
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { streamText } from 'ai';
+import { streamText, fallback } from 'ai';
 import { createClient } from '@/lib/supabase/server';
 import {
   AUTO_NOTE_SYSTEM_PROMPT,
@@ -52,49 +52,15 @@ export async function POST(req: Request) {
     );
 
     const result = streamText({
-      model: openrouter.chat('google/gemma-4-31b-it:free'),
+      model: fallback([
+        openrouter.chat('google/gemma-4-31b-it:free'),
+        openrouter.chat('google/gemma-4-26b-a4b-it:free'),
+      ]),
       system: AUTO_NOTE_SYSTEM_PROMPT,
       prompt: userPrompt,
       onFinish: async ({ text }) => {
-        // Parsear o texto gerado em seções
-        const recordData = parseRecordSections(text);
-
-        // Verificar se já existe um registro
-        const { data: existing } = await supabase
-          .from('medical_records')
-          .select('id, version')
-          .eq('patient_id', patientId)
-          .eq('user_id', user.id)
-          .order('version', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (existing) {
-          await supabase
-            .from('medical_records')
-            .update({
-              record_data: recordData,
-              version: existing.version + 1,
-            })
-            .eq('id', existing.id);
-        } else {
-          await supabase.from('medical_records').insert({
-            user_id: user.id,
-            patient_id: patientId,
-            record_data: recordData,
-            version: 1,
-          });
-        }
-
-        // Marcar transcrições como processadas
-        if (transcriptionText) {
-          await supabase
-            .from('transcriptions')
-            .update({ processed: true })
-            .eq('patient_id', patientId)
-            .eq('user_id', user.id)
-            .eq('processed', false);
-        }
+        // Agora o salvamento é feito no frontend após confirmação do usuário
+        console.log('Geração concluída. Aguardando revisão do usuário.');
       },
     });
 

@@ -1,5 +1,5 @@
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { streamText, tool } from 'ai';
+import { streamText, fallback } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { buildChatSystemPrompt } from '@/lib/prompts/chat';
@@ -58,10 +58,22 @@ export async function POST(req: Request) {
     );
 
     const result = streamText({
-      model: openrouter.chat('google/gemma-4-31b-it:free'),
+      model: fallback([
+        openrouter.chat('google/gemma-4-31b-it:free'),
+        openrouter.chat('google/gemma-4-26b-a4b-it:free'),
+      ]),
       system: systemPrompt,
       messages,
       tools: {
+        proposeRecordEdit: {
+          description: 'Propõe uma edição no prontuário médico. A IA deve usar essa ferramenta SEMPRE que o usuário pedir para alterar, corrigir ou adicionar informações ao prontuário médico. Você deve enviar o texto completo e atualizado da seção afetada.',
+          parameters: z.object({
+            section: z.string().describe('O nome da seção afetada. Ex: Queixa Principal (QP), História da Moléstia Atual (HMA), Medicações em Uso, etc.'),
+            newContent: z.string().describe('O texto Markdown completo e atualizado para esta seção, incorporando as edições solicitadas.'),
+            reason: z.string().describe('Justificativa breve para a mudança, para o usuário entender o que foi feito.'),
+          }),
+          // Não possui execute no servidor. Será enviado ao cliente para confirmação.
+        } as any,
         searchMedicalInfo: {
           description: 'Busca informações médicas na internet.',
           parameters: z.object({

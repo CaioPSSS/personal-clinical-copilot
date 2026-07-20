@@ -12,7 +12,9 @@ import {
   Loader2,
   RefreshCw,
   CheckCircle2,
+  Save,
 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { MedicalRecord, Transcription } from '@/lib/types';
 
@@ -44,21 +46,47 @@ export function StepAutoNote({
   onDataChange,
 }: StepAutoNoteProps) {
   const [generated, setGenerated] = useState(false);
+  const [editedNote, setEditedNote] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const pendingTranscriptions = transcriptions.filter((t) => !t.processed);
 
   const { completion, isLoading, complete } = useCompletion({
     api: '/api/generate-note',
     body: { patientId },
-    onFinish: () => {
-      setGenerated(true);
-      onDataChange();
-      toast.success('Prontuário atualizado com sucesso!');
+    onFinish: (_, text) => {
+      setEditedNote(text);
+      toast.success('Prontuário gerado. Por favor, revise o texto abaixo antes de salvar.');
     },
     onError: (err) => {
       toast.error('Erro ao gerar prontuário: ' + err.message);
     },
   });
+
+  async function handleSave() {
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/save-record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId,
+          text: editedNote,
+          hasTranscriptions: pendingTranscriptions.length > 0,
+        }),
+      });
+      if (!res.ok) throw new Error('Falha ao salvar');
+      
+      setGenerated(true);
+      setEditedNote('');
+      onDataChange();
+      toast.success('Prontuário salvo com sucesso!');
+    } catch (err) {
+      toast.error('Erro ao salvar o prontuário.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   async function handleGenerate() {
     setGenerated(false);
@@ -114,7 +142,7 @@ export function StepAutoNote({
       </Card>
 
       {/* Streaming output */}
-      {isLoading && completion && (
+      {isLoading && (
         <Card className="border-primary/30">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -132,8 +160,38 @@ export function StepAutoNote({
         </Card>
       )}
 
+      {/* Review output */}
+      {!isLoading && editedNote && !generated && (
+        <Card className="border-yellow-500/30">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2 text-yellow-500">
+              <FileText className="w-4 h-4" />
+              Revisar Prontuário Gerado
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Faça as correções necessárias no texto Markdown abaixo antes de salvar.
+            </p>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <Textarea
+              className="font-mono text-xs min-h-[400px] bg-muted/50"
+              value={editedNote}
+              onChange={(e) => setEditedNote(e.target.value)}
+            />
+            <Button 
+              className="w-full sm:w-auto self-end bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+              Confirmar e Salvar Prontuário
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Generated success */}
-      {generated && !isLoading && (
+      {generated && !isLoading && !editedNote && (
         <Card className="border-green-500/30">
           <CardContent className="flex items-center gap-3 py-4">
             <CheckCircle2 className="w-5 h-5 text-green-500" />
