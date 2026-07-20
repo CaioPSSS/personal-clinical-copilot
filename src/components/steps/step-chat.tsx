@@ -220,7 +220,7 @@ export function StepChat({
               {messages.map((message) => 
                 (message.parts || []).map((part) => {
                   if (part.type === 'tool-invocation') {
-                    const toolInvocation = part.toolInvocation;
+                    const toolInvocation = part as any;
                     const { toolName, toolCallId, state, args } = toolInvocation;
                     if (toolName === 'proposeRecordEdit') {
                       const parsedArgs = typeof args === 'string' ? JSON.parse(args) : args;
@@ -264,7 +264,7 @@ export function StepChat({
                                           })
                                         });
                                         if (res.ok) {
-                                          addToolResult({ toolCallId, result: { approved: true } });
+                                          addToolResult({ toolCallId, result: { approved: true } } as any);
                                           toast.success('Prontuário atualizado!', { id: 'edit-record' });
                                         } else {
                                           throw new Error('Falha na API');
@@ -280,7 +280,7 @@ export function StepChat({
                                     size="sm"
                                     variant="outline"
                                     className="h-8 text-xs bg-background"
-                                    onClick={() => addToolResult({ toolCallId, result: { approved: false } })}
+                                    onClick={() => addToolResult({ toolCallId, result: { approved: false } } as any)}
                                   >
                                     Recusar
                                   </Button>

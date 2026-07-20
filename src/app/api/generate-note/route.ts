@@ -1,5 +1,5 @@
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { streamText, fallback } from 'ai';
+import { streamText } from 'ai';
 import { createClient } from '@/lib/supabase/server';
 import {
   AUTO_NOTE_SYSTEM_PROMPT,
@@ -52,10 +52,7 @@ export async function POST(req: Request) {
     );
 
     const result = streamText({
-      model: fallback([
-        openrouter.chat('google/gemma-4-31b-it:free'),
-        openrouter.chat('google/gemma-4-26b-a4b-it:free'),
-      ]),
+      model: openrouter.chat('google/gemma-4-31b-it:free'),
       system: AUTO_NOTE_SYSTEM_PROMPT,
       prompt: userPrompt,
       onFinish: async ({ text }) => {
