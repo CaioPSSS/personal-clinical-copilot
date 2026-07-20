@@ -29,17 +29,19 @@ interface StepAutoNoteProps {
 }
 
 const SECTION_LABELS: Record<string, string> = {
-  queixa_principal: 'Queixa Principal (QP)',
-  historia_doenca_atual: 'História da Moléstia Atual (HMA)',
-  revisao_de_sistemas: 'Revisão de Sistemas',
+  identificacao: 'Identificação',
+  queixa_principal: 'Queixa Principal',
+  historia_doenca_atual: 'História da Moléstia Atual',
   antecedentes_pessoais: 'Antecedentes Pessoais',
+  alergias: 'Alergias',
+  medicacoes_uso_continuo: 'Medicação de Uso Contínuo',
   antecedentes_familiares: 'Antecedentes Familiares',
   habitos_de_vida: 'Hábitos de Vida',
-  medicacoes_em_uso: 'Medicações em Uso',
-  alergias: 'Alergias',
   exame_fisico: 'Exame Físico',
-  hipoteses_diagnosticas: 'Hipóteses Diagnósticas',
-  plano_terapeutico: 'Plano Terapêutico',
+  evolucao_do_dia: 'Evolução do Dia',
+  exames_laboratoriais: 'Exames Laboratoriais',
+  exames_imagem: 'Exames de Imagem',
+  condutas: 'Condutas Feitas/Planejadas',
 };
 
 export function StepAutoNote({

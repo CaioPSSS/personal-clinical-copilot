@@ -62,7 +62,7 @@ export function StepEvidence({
   return (
     <div className="space-y-6 animate-slide-up">
       {/* Action Header */}
-      {(!evidenceNote && !isLoading) || generated ? null : (
+      {(isLoading || generated) ? null : (
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="flex flex-col sm:flex-row items-center justify-between p-6 gap-4">
             <div className="flex-1 space-y-2">

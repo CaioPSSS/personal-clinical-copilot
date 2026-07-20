@@ -64,17 +64,19 @@ export async function POST(req: NextRequest) {
 function parseRecordSections(text: string): Record<string, string> {
   const sections: Record<string, string> = {};
   const sectionMap: Record<string, string> = {
-    'Queixa Principal (QP)': 'queixa_principal',
-    'História da Moléstia Atual (HMA)': 'historia_doenca_atual',
-    'Revisão de Sistemas': 'revisao_de_sistemas',
+    Identificação: 'identificacao',
+    'Queixa Principal': 'queixa_principal',
+    'História da Moléstia Atual': 'historia_doenca_atual',
     'Antecedentes Pessoais': 'antecedentes_pessoais',
+    Alergias: 'alergias',
+    'Medicação de Uso Contínuo': 'medicacoes_uso_continuo',
     'Antecedentes Familiares': 'antecedentes_familiares',
     'Hábitos de Vida': 'habitos_de_vida',
-    'Medicações em Uso': 'medicacoes_em_uso',
-    Alergias: 'alergias',
     'Exame Físico': 'exame_fisico',
-    'Hipóteses Diagnósticas': 'hipoteses_diagnosticas',
-    'Plano Terapêutico': 'plano_terapeutico',
+    'Evolução do Dia': 'evolucao_do_dia',
+    'Exames Laboratoriais': 'exames_laboratoriais',
+    'Exames de Imagem': 'exames_imagem',
+    'Condutas Feitas/Planejadas': 'condutas',
   };
 
   let currentKey: string | null = null;

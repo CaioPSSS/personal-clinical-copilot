@@ -61,9 +61,25 @@ export async function POST(req: Request) {
     let recordText = '';
     if (recordRes.data?.record_data) {
       const data = recordRes.data.record_data as Record<string, string>;
+      const labelMap: Record<string, string> = {
+        identificacao: 'Identificação',
+        queixa_principal: 'Queixa Principal',
+        historia_doenca_atual: 'História da Moléstia Atual',
+        antecedentes_pessoais: 'Antecedentes Pessoais',
+        alergias: 'Alergias',
+        medicacoes_uso_continuo: 'Medicação de Uso Contínuo',
+        antecedentes_familiares: 'Antecedentes Familiares',
+        habitos_de_vida: 'Hábitos de Vida',
+        exame_fisico: 'Exame Físico',
+        evolucao_do_dia: 'Evolução do Dia',
+        exames_laboratoriais: 'Exames Laboratoriais',
+        exames_imagem: 'Exames de Imagem',
+        condutas: 'Condutas Feitas/Planejadas',
+      };
+
       recordText = Object.entries(data)
         .filter(([, v]) => v && v !== 'Não informado')
-        .map(([k, v]) => `## ${k}\n${v}`)
+        .map(([k, v]) => `## ${labelMap[k] || k}\n${v}`)
         .join('\n\n');
     }
 
@@ -89,7 +105,7 @@ export async function POST(req: Request) {
         proposeRecordEdit: {
           description: 'Propõe uma edição no prontuário médico. A IA deve usar essa ferramenta SEMPRE que o usuário pedir para alterar, corrigir ou adicionar informações ao prontuário médico. Você deve enviar o texto completo e atualizado da seção afetada.',
           parameters: z.object({
-            section: z.string().describe('O nome da seção afetada. Ex: Queixa Principal (QP), História da Moléstia Atual (HMA), Medicações em Uso, etc.'),
+            section: z.string().describe('O nome exato da seção afetada do Prontuário Atual. Ex: História da Moléstia Atual, Evolução do Dia, Condutas Feitas/Planejadas, etc.'),
             newContent: z.string().describe('O texto Markdown completo e atualizado para esta seção, incorporando as edições solicitadas.'),
             reason: z.string().describe('Justificativa breve para a mudança, para o usuário entender o que foi feito.'),
           }),

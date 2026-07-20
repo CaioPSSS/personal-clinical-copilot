@@ -170,7 +170,7 @@ export function PatientWorkspace({
           />
         </TabsContent>
 
-        <TabsContent value="auto-note">
+        <TabsContent value="auto-note" keepMounted>
           <StepAutoNote
             patientId={patient.id}
             medicalRecord={medicalRecord}
@@ -180,7 +180,7 @@ export function PatientWorkspace({
           />
         </TabsContent>
 
-        <TabsContent value="evidence">
+        <TabsContent value="evidence" keepMounted>
           <StepEvidence
             patientId={patient.id}
             medicalRecord={medicalRecord}
@@ -189,7 +189,7 @@ export function PatientWorkspace({
           />
         </TabsContent>
 
-        <TabsContent value="chat">
+        <TabsContent value="chat" keepMounted>
           <StepChat
             patientId={patient.id}
             medicalRecord={medicalRecord}
