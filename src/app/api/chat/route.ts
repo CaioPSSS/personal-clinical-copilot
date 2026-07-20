@@ -96,8 +96,8 @@ export async function POST(req: Request) {
 
     const result = streamText({
       model: withFallback(
-        openrouter.chat('google/gemma-4-31b-it:free'),
-        openrouter.chat('google/gemma-4-26b-a4b-it:free')
+        openrouter.chat('google/gemma-4-31b-it'),
+        openrouter.chat('google/gemma-4-26b-a4b-it')
       ),
       system: systemPrompt,
       messages: coreMessages,
