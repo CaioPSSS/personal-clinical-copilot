@@ -92,10 +92,6 @@ export async function POST(req: Request) {
 
     const messages: any[] = [
       {
-        role: 'system',
-        content: AUTO_NOTE_SYSTEM_PROMPT,
-      },
-      {
         role: 'user',
         content: contentParts,
       }
@@ -106,6 +102,7 @@ export async function POST(req: Request) {
         openrouter.chat('google/gemma-4-31b-it:free'),
         openrouter.chat('google/gemma-4-26b-a4b-it:free')
       ),
+      system: AUTO_NOTE_SYSTEM_PROMPT,
       messages: messages,
       onFinish: async ({ text }) => {
         // Agora o salvamento é feito no frontend após confirmação do usuário
