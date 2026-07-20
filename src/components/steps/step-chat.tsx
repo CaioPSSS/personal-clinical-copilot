@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useChat, UIMessage } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -199,10 +201,12 @@ export function StepChat({
                         : 'bg-muted/50'
                     }`}
                   >
-                    <div className="prose-medical whitespace-pre-wrap leading-relaxed">
-                      {message.parts
-                        .map((p) => (p.type === 'text' ? p.text : ''))
-                        .join('')}
+                    <div className={`prose-medical prose-sm whitespace-pre-wrap leading-relaxed ${message.role === 'user' ? 'text-primary-foreground prose-invert' : 'dark:prose-invert'}`}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {message.parts
+                          .map((p) => (p.type === 'text' ? p.text : ''))
+                          .join('')}
+                      </ReactMarkdown>
                     </div>
                   </div>
 

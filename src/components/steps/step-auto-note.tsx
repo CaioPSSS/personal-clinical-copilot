@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useCompletion } from '@ai-sdk/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -99,11 +101,11 @@ export function StepAutoNote({
 
     const imagePaths = pendingFiles.map((f) => f.storage_path);
 
-    await complete(allPendingText, {
-      body: {
-        patientId,
-        transcriptionText: allPendingText || null,
-        imagePaths: imagePaths.length > 0 ? imagePaths : null,
+    await complete('', {
+      body: { 
+        patientId, 
+        transcriptText: allPendingText,
+        imagePaths: imagePaths.length > 0 ? imagePaths : undefined 
       },
     });
   }
@@ -158,8 +160,8 @@ export function StepAutoNote({
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[400px]">
-              <div className="prose-medical text-sm whitespace-pre-wrap">
-                {completion}
+              <div className="prose-medical prose-sm text-sm whitespace-pre-wrap dark:prose-invert">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{completion}</ReactMarkdown>
               </div>
             </ScrollArea>
           </CardContent>
@@ -233,9 +235,9 @@ export function StepAutoNote({
                       <h3 className="text-sm font-semibold text-primary mb-1">
                         {label}
                       </h3>
-                      <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
-                        {value}
-                      </p>
+                      <div className="prose-medical prose-sm text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed dark:prose-invert">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
+                      </div>
                     </div>
                   );
                 })}

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { buildChatSystemPrompt } from '@/lib/prompts/chat';
 
-export const maxDuration = 60;
+export const maxDuration = 600;
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
         .single(),
     ]);
 
-    let recordText: string | null = null;
+    let recordText = '';
     if (recordRes.data?.record_data) {
       const data = recordRes.data.record_data as Record<string, string>;
       recordText = Object.entries(data)
@@ -72,13 +72,19 @@ export async function POST(req: Request) {
       evidenceRes.data?.content || null
     );
 
+    // Mapear manualmente para garantir que apenas role e content/parts válidos existam
+    const coreMessages = messages.map((m: any) => ({
+      role: m.role,
+      content: m.content || '',
+    }));
+
     const result = streamText({
       model: withFallback(
         openrouter.chat('google/gemma-4-31b-it:free'),
         openrouter.chat('google/gemma-4-26b-a4b-it:free')
       ),
       system: systemPrompt,
-      messages,
+      messages: coreMessages,
       tools: {
         proposeRecordEdit: {
           description: 'Propõe uma edição no prontuário médico. A IA deve usar essa ferramenta SEMPRE que o usuário pedir para alterar, corrigir ou adicionar informações ao prontuário médico. Você deve enviar o texto completo e atualizado da seção afetada.',

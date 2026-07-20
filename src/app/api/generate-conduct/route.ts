@@ -4,11 +4,26 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { EVIDENCE_NOTE_SYSTEM_PROMPT } from '@/lib/prompts/evidence-note';
 
-export const maxDuration = 60;
+export const maxDuration = 600;
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
 });
+
+// Custom proxy para lidar com falhas de rate limit no Vercel AI SDK
+function withFallback(primary: any, fallbackModel: any): any {
+  return {
+    ...primary,
+    async doGenerate(options: any) {
+      try { return await primary.doGenerate(options); } 
+      catch (err) { return await fallbackModel.doGenerate(options); }
+    },
+    async doStream(options: any) {
+      try { return await primary.doStream(options); } 
+      catch (err) { return await fallbackModel.doStream(options); }
+    }
+  };
+}
 
 export async function POST(req: Request) {
   try {
@@ -23,8 +38,8 @@ export async function POST(req: Request) {
       return new Response('Não autenticado', { status: 401 });
     }
 
-    // Buscar prontuário completo
-    const { data: record } = await supabase
+    // Buscar as informações atuais do prontuário
+    const { data: currentRecord } = await supabase
       .from('medical_records')
       .select('record_data')
       .eq('patient_id', patientId)
@@ -33,25 +48,30 @@ export async function POST(req: Request) {
       .limit(1)
       .single();
 
-    if (!record) {
+    if (!currentRecord) {
       return new Response('Prontuário não encontrado. Gere o prontuário primeiro.', {
         status: 400,
       });
     }
 
-    // Montar o caso clínico
-    const recordData = record.record_data as Record<string, string>;
-    const caseText = Object.entries(recordData)
-      .filter(([, v]) => v && v !== 'Não informado')
-      .map(([k, v]) => `## ${k}\n${v}`)
-      .join('\n\n');
+    let recordText = '';
+    if (currentRecord?.record_data) {
+      const data = currentRecord.record_data as Record<string, string>;
+      recordText = Object.entries(data)
+        .filter(([, v]) => v && v !== 'Não informado')
+        .map(([k, v]) => `## ${k}\n${v}`)
+        .join('\n\n');
+    }
 
     const result = streamText({
-      model: openrouter.chat('google/gemma-4-31b-it:free'),
+      model: withFallback(
+        openrouter.chat('google/gemma-4-31b-it:free'),
+        openrouter.chat('google/gemma-4-26b-a4b-it:free')
+      ),
       system: EVIDENCE_NOTE_SYSTEM_PROMPT,
-      prompt: `Analise o seguinte caso clínico e gere a conduta baseada em evidências:\n\n${caseText}`,
+      prompt: `Analise o seguinte caso clínico e gere a conduta baseada em evidências:\n\n${recordText}`,
       tools: {
-        searchMedicalGuidelines: {
+        searchMedicalGuidelines: tool({
           description:
             'Busca diretrizes médicas e evidências clínicas atualizadas na internet. Use para fundamentar diagnósticos e condutas.',
           parameters: z.object({
@@ -89,7 +109,7 @@ export async function POST(req: Request) {
               return { answer: 'Erro na busca.', results: [] };
             }
           },
-        } as any,
+        } as any),
       },
       maxSteps: 5,
       onFinish: async ({ text }: { text: string }) => {

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useCompletion } from '@ai-sdk/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,42 +61,41 @@ export function StepEvidence({
 
   return (
     <div className="space-y-6 animate-slide-up">
-      {/* Action bar */}
-      <Card>
-        <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-5">
-          <div>
-            <h3 className="font-semibold flex items-center gap-2">
-              <FlaskConical className="w-4 h-4 text-primary" />
-              Conduta Baseada em Evidências
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              A IA analisa o prontuário, busca diretrizes médicas e gera a conduta.
-            </p>
-            {!medicalRecord && (
-              <Badge variant="destructive" className="mt-2 text-[10px]">
-                <AlertTriangle className="w-3 h-3 mr-1" />
-                Prontuário necessário
-              </Badge>
-            )}
-          </div>
-          <Button
-            onClick={handleGenerate}
-            disabled={isLoading || !medicalRecord}
-            className="gradient-primary text-white hover:opacity-90"
-          >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : evidenceNote ? (
-              <RefreshCw className="w-4 h-4 mr-2" />
-            ) : (
-              <Sparkles className="w-4 h-4 mr-2" />
-            )}
-            {evidenceNote ? 'Regenerar Conduta' : 'Gerar Conduta'}
-          </Button>
-        </CardContent>
-      </Card>
+      {/* Action Header */}
+      {(!evidenceNote && !isLoading) || generated ? null : (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="flex flex-col sm:flex-row items-center justify-between p-6 gap-4">
+            <div className="flex-1 space-y-2">
+              <h3 className="font-semibold text-primary flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                Segunda Opinião e Conduta
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Com base no prontuário consolidado, irei gerar hipóteses
+                diagnósticas, pesquisar diretrizes atualizadas e propor um plano
+                terapêutico seguro.
+              </p>
+            </div>
+            <Button
+              size="lg"
+              onClick={handleGenerate}
+              className="w-full sm:w-auto shadow-md"
+              disabled={isLoading || !medicalRecord}
+            >
+              {evidenceNote ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Gerar Nova Conduta
+                </>
+              ) : (
+                'Gerar Conduta'
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Generated success */}
+      {/* Generated Success Message */}
       {generated && !isLoading && (
         <Card className="border-green-500/30">
           <CardContent className="flex items-center gap-3 py-4">
@@ -125,8 +126,8 @@ export function StepEvidence({
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[600px]">
-              <div className="prose-medical text-sm whitespace-pre-wrap">
-                {displayContent}
+              <div className="prose-medical prose-sm text-sm whitespace-pre-wrap dark:prose-invert">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
               </div>
             </ScrollArea>
           </CardContent>

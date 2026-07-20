@@ -6,7 +6,7 @@ import {
   buildAutoNoteUserPrompt,
 } from '@/lib/prompts/auto-note';
 
-export const maxDuration = 60;
+export const maxDuration = 600;
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,

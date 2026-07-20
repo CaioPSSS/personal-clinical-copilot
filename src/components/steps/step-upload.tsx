@@ -16,6 +16,8 @@ import {
   Trash2,
   Image as ImageIcon,
   FileText,
+  Pencil,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,6 +41,8 @@ export function StepUpload({
   const [uploading, setUploading] = useState(false);
   const [transcribing, setTranscribing] = useState<string | null>(null);
   const [manualText, setManualText] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   
@@ -243,6 +247,26 @@ export function StepUpload({
     }
   }
 
+  async function saveEdit(transcriptionId: string) {
+    if (!editValue.trim()) return;
+    try {
+      const res = await fetch('/api/edit-transcription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcriptionId, newText: editValue }),
+      });
+      if (res.ok) {
+        toast.success('Anotação atualizada!');
+        setEditingId(null);
+        onDataChange();
+      } else {
+        toast.error('Erro ao atualizar anotação.');
+      }
+    } catch (err) {
+      toast.error('Erro de conexão.');
+    }
+  }
+
   const pendingTranscriptions = transcriptions.filter((t) => !t.processed);
   const processedTranscriptions = transcriptions.filter((t) => t.processed);
   const pendingFiles = files.filter((f) => !f.processed);
@@ -379,9 +403,9 @@ export function StepUpload({
               ))}
 
               {transcriptions.map((t) => (
-                <div key={t.id} className="flex items-center justify-between p-3 rounded-lg border bg-card text-sm group">
-                  <div className="flex flex-col overflow-hidden max-w-[70%]">
-                    <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
+                <div key={t.id} className="flex flex-col p-3 rounded-lg border bg-card text-sm group gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       {t.audio_file_path?.includes('Texto Digitado') ? (
                         <Keyboard className="w-3 h-3" />
                       ) : (
@@ -391,18 +415,34 @@ export function StepUpload({
                       <span>•</span>
                       <span>{formatRelativeTime(new Date(t.created_at))}</span>
                     </div>
-                    <span className="text-xs truncate">{t.transcript_text}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={t.processed ? 'secondary' : 'default'} className="text-[10px]">
+                        {t.processed ? 'Incluído' : 'Pendente'}
+                      </Badge>
+                      {!t.processed && editingId !== t.id && (
+                        <>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { setEditingId(t.id); setEditValue(t.transcript_text); }}>
+                            <Pencil className="w-3 h-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteTranscription(t.id)}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant={t.processed ? 'secondary' : 'default'} className="text-[10px]">
-                      {t.processed ? 'Incluído' : 'Pendente'}
-                    </Badge>
-                    {!t.processed && (
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteTranscription(t.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
+
+                  {editingId === t.id ? (
+                    <div className="space-y-2 mt-1">
+                      <Textarea value={editValue} onChange={(e) => setEditValue(e.target.value)} className="text-xs min-h-[80px]" autoFocus />
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}><X className="w-3 h-3 mr-1" /> Cancelar</Button>
+                        <Button size="sm" onClick={() => saveEdit(t.id)}><Check className="w-3 h-3 mr-1" /> Salvar</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-xs">{t.transcript_text}</span>
+                  )}
                 </div>
               ))}
             </div>
@@ -424,78 +464,6 @@ export function StepUpload({
         </Card>
       )}
 
-      {/* Transcrições */}
-      {transcriptions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileAudio className="w-4 h-4 text-primary" />
-              Transcrições
-              {pendingTranscriptions.length > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {pendingTranscriptions.length} pendente{pendingTranscriptions.length !== 1 ? 's' : ''}
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {transcriptions.map((t) => (
-              <div
-                key={t.id}
-                className="p-3 rounded-lg bg-muted/50 text-sm space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    {formatRelativeTime(t.created_at)}
-                  </span>
-                  <Badge variant={t.processed ? 'default' : 'secondary'} className="text-[10px]">
-                    {t.processed ? (
-                      <><Check className="w-3 h-3 mr-1" /> Processado</>
-                    ) : (
-                      'Pendente'
-                    )}
-                  </Badge>
-                </div>
-                <p className="text-foreground/90 leading-relaxed">
-                  {t.transcript_text.length > 300
-                    ? t.transcript_text.slice(0, 300) + '...'
-                    : t.transcript_text}
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Imagens enviadas */}
-      {files.filter((f) => f.category === 'image').length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileImage className="w-4 h-4 text-blue-400" />
-              Imagens de Exames
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {files
-                .filter((f) => f.category === 'image')
-                .map((f) => (
-                  <div
-                    key={f.id}
-                    className="p-3 rounded-lg bg-muted/50 text-center"
-                  >
-                    <FileImage className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-xs truncate">{f.file_name}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {formatRelativeTime(f.created_at)}
-                    </p>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
