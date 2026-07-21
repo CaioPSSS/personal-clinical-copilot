@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { Transcription, FileRecord } from '@/lib/types';
 import { formatRelativeTime } from '@/lib/helpers';
 import { createClient } from '@/lib/supabase/client';
+import { compressAudioToMp3 } from '@/lib/audio-compressor';
 
 interface StepUploadProps {
   patientId: string;
@@ -42,6 +43,7 @@ export function StepUpload({
   const supabase = createClient();
   const [uploading, setUploading] = useState(false);
   const [transcribing, setTranscribing] = useState<string | null>(null);
+  const [compressing, setCompressing] = useState<string | null>(null);
   const [manualText, setManualText] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -106,8 +108,20 @@ export function StepUpload({
     try {
       for (const file of filesArray) {
         try {
+          // Compactar áudio (com fallback para o arquivo original em caso de erro na decodificação)
+          let fileToUpload = file;
+          try {
+            setCompressing(file.name);
+            fileToUpload = await compressAudioToMp3(file);
+          } catch (compressErr) {
+            console.warn('Erro ao compactar áudio, enviando arquivo original:', compressErr);
+            toast.info(`"${file.name}": Enviando sem compressão (formato alternativo).`);
+          } finally {
+            setCompressing(null);
+          }
+
           // 1. Upload para Storage
-          const uploadResult = await uploadFile(file, 'audio');
+          const uploadResult = await uploadFile(fileToUpload, 'audio');
 
           // 2. Transcrever via Groq passando apenas o storagePath (evita payload grande)
           setTranscribing(file.name);
@@ -531,12 +545,14 @@ export function StepUpload({
       )}
 
       {/* Uploading Overlay */}
-      {(uploading || transcribing) && (
+      {(uploading || transcribing || compressing) && (
         <Card className="border-primary/30">
           <CardContent className="flex items-center gap-3 py-4">
             <Loader2 className="w-5 h-5 animate-spin text-primary" />
             <span className="text-sm">
-              {transcribing
+              {compressing
+                ? `Compactando "${compressing}"...`
+                : transcribing
                 ? `Transcrevendo "${transcribing}"...`
                 : 'Enviando arquivo...'}
             </span>
