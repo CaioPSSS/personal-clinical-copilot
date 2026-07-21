@@ -29,7 +29,10 @@ function withFallback(primary: any, fallbackModel: any): any {
 
 export async function POST(req: Request) {
   try {
-    const { patientId, transcriptionText, imagePaths } = await req.json();
+    const body = await req.json();
+    const patientId = body.patientId;
+    const transcriptionText = body.transcriptionText || body.transcriptText;
+    const imagePaths = body.imagePaths;
 
     const supabase = await createClient();
     const {
