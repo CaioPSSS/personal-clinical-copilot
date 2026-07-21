@@ -24,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Transcription, FileRecord } from '@/lib/types';
 import { formatRelativeTime } from '@/lib/helpers';
+import { createClient } from '@/lib/supabase/client';
 
 interface StepUploadProps {
   patientId: string;
@@ -38,6 +39,7 @@ export function StepUpload({
   files,
   onDataChange,
 }: StepUploadProps) {
+  const supabase = createClient();
   const [uploading, setUploading] = useState(false);
   const [transcribing, setTranscribing] = useState<string | null>(null);
   const [manualText, setManualText] = useState('');
@@ -53,17 +55,40 @@ export function StepUpload({
 
   const uploadFile = useCallback(
     async (file: File, category: 'audio' | 'image') => {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('patientId', patientId);
-      formData.append('category', category);
+      // 1. Obter o usuário autenticado atual
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado.');
 
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      // 2. Definir o caminho no storage
+      const timestamp = Date.now();
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const storagePath = `${user.id}/${patientId}/${timestamp}_${safeName}`;
+
+      // 3. Upload direto do frontend para o Supabase Storage (evita limite de 4.5MB do Vercel)
+      const { error: uploadError } = await supabase.storage
+        .from('medical-files')
+        .upload(storagePath, file);
+
+      if (uploadError) throw new Error(uploadError.message);
+
+      // 4. Salvar metadados chamando a API com payload JSON leve
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId,
+          category,
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size,
+          storagePath,
+        }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       return data;
     },
-    [patientId]
+    [patientId, supabase]
   );
 
   async function handleAudioUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -74,16 +99,17 @@ export function StepUpload({
     try {
       for (const file of Array.from(fileList)) {
         // 1. Upload para Storage
-        await uploadFile(file, 'audio');
+        const uploadResult = await uploadFile(file, 'audio');
 
-        // 2. Transcrever via Groq
+        // 2. Transcrever via Groq passando apenas o storagePath (evita payload grande)
         setTranscribing(file.name);
-        const transcribeForm = new FormData();
-        transcribeForm.append('file', file);
-
         const transcribeRes = await fetch('/api/transcribe', {
           method: 'POST',
-          body: transcribeForm,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storagePath: uploadResult.storagePath,
+            fileName: file.name,
+          }),
         });
         const transcribeData = await transcribeRes.json();
 
@@ -108,8 +134,8 @@ export function StepUpload({
         }
       }
       onDataChange();
-    } catch (err) {
-      toast.error('Erro no upload/transcrição.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro no upload/transcrição.');
       console.error(err);
     } finally {
       setUploading(false);
