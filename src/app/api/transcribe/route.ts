@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Groq from 'groq-sdk';
+import Groq, { toFile } from 'groq-sdk';
 
 export const maxDuration = 300;
 
@@ -14,8 +14,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Nenhum arquivo enviado.' }, { status: 400 });
     }
 
+    // Convert generic File object to Buffer and then to Uploadable using toFile
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const groqFile = await toFile(buffer, file.name, { type: file.type });
+
     const transcription = await groq.audio.transcriptions.create({
-      file: file,
+      file: groqFile,
       model: 'whisper-large-v3',
       response_format: 'json',
       language: 'pt',

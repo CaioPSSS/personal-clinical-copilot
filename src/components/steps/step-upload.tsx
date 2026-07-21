@@ -328,13 +328,21 @@ export function StepUpload({
               ref={audioRef}
               type="file"
               className="hidden"
-              accept="audio/*,image/*"
+              accept="audio/*,image/*,.m4a"
               multiple
               onChange={(e) => {
                 // Separar os arquivos em áudio e imagem e chamar as funções adequadas
                 const files = e.target.files;
                 if (!files) return;
-                const audioFiles = Array.from(files).filter(f => f.type.startsWith('audio'));
+                const audioFiles = Array.from(files)
+                  .filter(f => f.type.startsWith('audio/') || f.name.toLowerCase().endsWith('.m4a') || f.type === 'video/mp4')
+                  .map(f => {
+                    // Normaliza tipo MIME de .m4a para audio/mp4 caso venha vazio ou incorreto
+                    if (f.name.toLowerCase().endsWith('.m4a') && !f.type.startsWith('audio/')) {
+                      return new File([f], f.name, { type: 'audio/mp4' });
+                    }
+                    return f;
+                  });
                 const imageFiles = Array.from(files).filter(f => f.type.startsWith('image'));
                 
                 if (audioFiles.length > 0) {
