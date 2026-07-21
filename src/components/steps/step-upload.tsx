@@ -55,23 +55,28 @@ export function StepUpload({
 
   const uploadFile = useCallback(
     async (file: File, category: 'audio' | 'image') => {
-      // 1. Obter o usuário autenticado atual
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado.');
+      // 1. Obter a URL de upload assinada do backend (evita erros de RLS e limitações CORS)
+      const urlRes = await fetch('/api/get-upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: file.name,
+          patientId,
+        }),
+      });
+      const urlData = await urlRes.json();
+      if (!urlRes.ok) throw new Error(urlData.error || 'Falha ao autorizar upload.');
 
-      // 2. Definir o caminho no storage
-      const timestamp = Date.now();
-      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const storagePath = `${user.id}/${patientId}/${timestamp}_${safeName}`;
+      const { token, storagePath } = urlData;
 
-      // 3. Upload direto do frontend para o Supabase Storage (evita limite de 4.5MB do Vercel)
+      // 2. Fazer o upload usando o token gerado diretamente para o Storage
       const { error: uploadError } = await supabase.storage
         .from('medical-files')
-        .upload(storagePath, file);
+        .uploadToSignedUrl(storagePath, token, file);
 
-      if (uploadError) throw new Error(uploadError.message);
+      if (uploadError) throw new Error(`Falha no upload para o storage: ${uploadError.message}`);
 
-      // 4. Salvar metadados chamando a API com payload JSON leve
+      // 3. Salvar metadados no banco de dados chamando a API com payload JSON leve
       const res = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -85,7 +90,7 @@ export function StepUpload({
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.error || 'Falha ao registrar arquivo no prontuário.');
       return data;
     },
     [patientId, supabase]
@@ -96,47 +101,67 @@ export function StepUpload({
     if (!fileList?.length) return;
 
     setUploading(true);
+    const filesArray = Array.from(fileList);
+    
     try {
-      for (const file of Array.from(fileList)) {
-        // 1. Upload para Storage
-        const uploadResult = await uploadFile(file, 'audio');
+      for (const file of filesArray) {
+        try {
+          // 1. Upload para Storage
+          const uploadResult = await uploadFile(file, 'audio');
 
-        // 2. Transcrever via Groq passando apenas o storagePath (evita payload grande)
-        setTranscribing(file.name);
-        const transcribeRes = await fetch('/api/transcribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            storagePath: uploadResult.storagePath,
-            fileName: file.name,
-          }),
-        });
-        const transcribeData = await transcribeRes.json();
+          // 2. Transcrever via Groq passando apenas o storagePath (evita payload grande)
+          setTranscribing(file.name);
+          const transcribeRes = await fetch('/api/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              storagePath: uploadResult.storagePath,
+              fileName: file.name,
+            }),
+          });
+          const transcribeData = await transcribeRes.json();
 
-        if (!transcribeRes.ok) {
-          toast.error(`Erro ao transcrever ${file.name}: ${transcribeData.error}`);
-          continue;
-        }
+          if (!transcribeRes.ok) {
+            throw new Error(transcribeData.error || 'Falha na transcrição.');
+          }
 
-        // 3. Salvar transcrição no banco (via API simples)
-        const saveRes = await fetch('/api/save-transcription', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            patientId,
-            transcriptText: transcribeData.text,
-            audioFilePath: file.name,
-          }),
-        });
+          // 3. Salvar transcrição no banco (via API simples)
+          const saveRes = await fetch('/api/save-transcription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              patientId,
+              transcriptText: transcribeData.text,
+              audioFilePath: file.name,
+            }),
+          });
 
-        if (saveRes.ok) {
+          if (!saveRes.ok) {
+            throw new Error('Falha ao salvar a transcrição no prontuário.');
+          }
+
           toast.success(`"${file.name}" transcrito com sucesso!`);
+        } catch (err: any) {
+          const errMsg = err?.message || 'Erro no processamento.';
+          toast.error(`"${file.name}": ${errMsg}`);
+          console.error(`Erro no arquivo ${file.name}:`, err);
+          
+          // Log para o console do Vercel
+          await fetch('/api/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: `Erro no arquivo ${file.name}: ${errMsg}`,
+              details: err?.stack || String(err),
+              fileInfo: { name: file.name, size: file.size, type: file.type }
+            })
+          }).catch(console.error);
         }
       }
       onDataChange();
-    } catch (err: any) {
-      toast.error(err?.message || 'Erro no upload/transcrição.');
-      console.error(err);
+    } catch (outerErr: any) {
+      toast.error('Erro inesperado no upload.');
+      console.error(outerErr);
     } finally {
       setUploading(false);
       setTranscribing(null);
@@ -151,13 +176,30 @@ export function StepUpload({
     setUploading(true);
     try {
       for (const file of Array.from(fileList)) {
-        await uploadFile(file, 'image');
-        toast.success(`"${file.name}" enviado com sucesso!`);
+        try {
+          await uploadFile(file, 'image');
+          toast.success(`"${file.name}" enviado com sucesso!`);
+        } catch (err: any) {
+          const errMsg = err?.message || 'Erro no upload da imagem.';
+          toast.error(`"${file.name}": ${errMsg}`);
+          console.error(err);
+
+          // Log para o console do Vercel
+          await fetch('/api/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: `Erro na imagem ${file.name}: ${errMsg}`,
+              details: err?.stack || String(err),
+              fileInfo: { name: file.name, size: file.size, type: file.type }
+            })
+          }).catch(console.error);
+        }
       }
       onDataChange();
-    } catch (err) {
-      toast.error('Erro no upload da imagem.');
-      console.error(err);
+    } catch (outerErr: any) {
+      toast.error('Erro inesperado no upload.');
+      console.error(outerErr);
     } finally {
       setUploading(false);
       if (imageRef.current) imageRef.current.value = '';
