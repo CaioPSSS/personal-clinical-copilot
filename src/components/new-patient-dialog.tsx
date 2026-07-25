@@ -14,23 +14,30 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPatient } from '@/app/(app)/dashboard/actions';
 
 interface NewPatientDialogProps {
   onCreated: () => void;
+  existingInstitutions?: string[];
 }
 
-export function NewPatientDialog({ onCreated }: NewPatientDialogProps) {
+export function NewPatientDialog({ onCreated, existingInstitutions = [] }: NewPatientDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedInst, setSelectedInst] = useState<string>('');
+  const [customInst, setCustomInst] = useState<string>('');
+  const [isAddingCustom, setIsAddingCustom] = useState<boolean>(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
+    const finalInst = isAddingCustom || selectedInst === '__new__' ? customInst.trim() : selectedInst;
+    formData.set('institution', finalInst);
+
     const result = await createPatient(formData);
 
     if (result?.error) {
@@ -38,6 +45,9 @@ export function NewPatientDialog({ onCreated }: NewPatientDialogProps) {
     } else {
       toast.success('Paciente criado com sucesso!');
       setOpen(false);
+      setSelectedInst('');
+      setCustomInst('');
+      setIsAddingCustom(false);
       onCreated();
     }
     setLoading(false);
@@ -66,6 +76,57 @@ export function NewPatientDialog({ onCreated }: NewPatientDialogProps) {
             <Input id="full_name" name="full_name" required placeholder="Nome do paciente" />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="institution" className="flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5 text-primary" />
+              Instituição / Hospital
+            </Label>
+            {!isAddingCustom ? (
+              <div className="flex gap-2">
+                <select
+                  id="institution-select"
+                  value={selectedInst}
+                  onChange={(e) => {
+                    if (e.target.value === '__new__') {
+                      setIsAddingCustom(true);
+                    } else {
+                      setSelectedInst(e.target.value);
+                    }
+                  }}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="">Nenhuma / Não especificada</option>
+                  {existingInstitutions.map((inst) => (
+                    <option key={inst} value={inst}>
+                      {inst}
+                    </option>
+                  ))}
+                  <option value="__new__">+ Cadastrar Nova Instituição...</option>
+                </select>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nome da nova instituição..."
+                  value={customInst}
+                  onChange={(e) => setCustomInst(e.target.value)}
+                  autoFocus
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsAddingCustom(false);
+                    setCustomInst('');
+                  }}
+                >
+                  Voltar
+                </Button>
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date_of_birth">Data de Nascimento</Label>
@@ -76,7 +137,7 @@ export function NewPatientDialog({ onCreated }: NewPatientDialogProps) {
               <select
                 id="gender"
                 name="gender"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="">Selecione</option>
                 <option value="Masculino">Masculino</option>

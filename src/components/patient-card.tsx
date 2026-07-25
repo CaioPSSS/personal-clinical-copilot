@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Trash2, BedDouble, Calendar } from 'lucide-react';
+import { MoreVertical, Trash2, BedDouble, Calendar, Building2 } from 'lucide-react';
 import { Patient } from '@/lib/types';
 import { calculateAge, formatRelativeTime, getInitials } from '@/lib/helpers';
 
@@ -40,7 +40,7 @@ export function PatientCard({ patient, onDelete }: PatientCardProps) {
                 <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
                   {patient.full_name}
                 </h3>
-                <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   {age !== null && (
                     <span className="text-xs text-muted-foreground">
                       {age} anos
@@ -49,6 +49,12 @@ export function PatientCard({ patient, onDelete }: PatientCardProps) {
                   {patient.gender && (
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                       {patient.gender}
+                    </Badge>
+                  )}
+                  {patient.institution && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">
+                      <Building2 className="w-2.5 h-2.5 mr-1" />
+                      {patient.institution}
                     </Badge>
                   )}
                 </div>

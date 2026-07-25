@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { parseRecordSections } from '@/lib/record-parser';
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
         .update({
           record_data: recordData,
           version: existing.version + 1,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
     } else {
@@ -59,48 +61,4 @@ export async function POST(req: NextRequest) {
     console.error('Erro ao salvar prontuário:', error);
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }
-}
-
-function parseRecordSections(text: string): Record<string, string> {
-  const sections: Record<string, string> = {};
-  const sectionMap: Record<string, string> = {
-    Identificação: 'identificacao',
-    'Queixa Principal': 'queixa_principal',
-    'História da Moléstia Atual': 'historia_doenca_atual',
-    'Antecedentes Pessoais': 'antecedentes_pessoais',
-    Alergias: 'alergias',
-    'Medicação de Uso Contínuo': 'medicacoes_uso_continuo',
-    'Antecedentes Familiares': 'antecedentes_familiares',
-    'Hábitos de Vida': 'habitos_de_vida',
-    'Exame Físico': 'exame_fisico',
-    'Evolução do Dia': 'evolucao_do_dia',
-    'Exames Laboratoriais': 'exames_laboratoriais',
-    'Exames de Imagem': 'exames_imagem',
-    'Condutas Feitas/Planejadas': 'condutas',
-  };
-
-  let currentKey: string | null = null;
-  let currentContent: string[] = [];
-
-  const lines = text.split('\n');
-
-  for (const line of lines) {
-    const match = line.match(/^##\s+(.*)/);
-    if (match) {
-      if (currentKey) {
-        sections[currentKey] = currentContent.join('\n').trim();
-      }
-      const rawTitle = match[1].trim();
-      currentKey = sectionMap[rawTitle] || rawTitle.toLowerCase().replace(/ /g, '_');
-      currentContent = [];
-    } else if (currentKey) {
-      currentContent.push(line);
-    }
-  }
-
-  if (currentKey) {
-    sections[currentKey] = currentContent.join('\n').trim();
-  }
-
-  return sections;
 }

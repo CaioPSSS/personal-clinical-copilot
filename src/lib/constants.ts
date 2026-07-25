@@ -1,0 +1,15 @@
+export const SECTION_LABELS: Record<string, string> = {
+  identificacao: 'Identificação',
+  queixa_principal: 'Queixa Principal',
+  historia_doenca_atual: 'História da Moléstia Atual',
+  antecedentes_pessoais: 'Antecedentes Pessoais',
+  alergias: 'Alergias',
+  medicacoes_uso_continuo: 'Medicação de Uso Contínuo',
+  antecedentes_familiares: 'Antecedentes Familiares',
+  habitos_de_vida: 'Hábitos de Vida',
+  exame_fisico: 'Exame Físico',
+  evolucao_do_dia: 'Evolução do Dia',
+  exames_laboratoriais: 'Exames Laboratoriais',
+  exames_imagem: 'Exames de Imagem',
+  condutas: 'Condutas Feitas/Planejadas',
+};

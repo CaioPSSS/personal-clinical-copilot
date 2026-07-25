@@ -11,6 +11,7 @@ import { signOut } from '@/app/(auth)/actions';
 import {
   Stethoscope,
   LayoutDashboard,
+  GraduationCap,
   LogOut,
   Menu,
 } from 'lucide-react';
@@ -28,6 +29,11 @@ function SidebarContent({ userEmail }: SidebarProps) {
       href: '/dashboard',
       label: 'Pacientes',
       icon: LayoutDashboard,
+    },
+    {
+      href: '/reports',
+      label: 'Aulas Semanais',
+      icon: GraduationCap,
     },
   ];
 
@@ -59,7 +65,7 @@ function SidebarContent({ userEmail }: SidebarProps) {
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
                 isActive
-                  ? 'bg-primary/10 text-primary'
+                  ? 'bg-primary/10 text-primary font-semibold'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
             >

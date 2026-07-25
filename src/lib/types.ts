@@ -2,6 +2,7 @@ export interface Patient {
   id: string;
   user_id: string;
   full_name: string;
+  institution: string | null;
   date_of_birth: string | null;
   gender: string | null;
   contact_phone: string | null;
@@ -78,5 +79,17 @@ export interface FileRecord {
   storage_path: string;
   category: 'audio' | 'image' | 'document';
   processed?: boolean;
+  created_at: string;
+}
+
+export interface WeeklyReport {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  case_count: number;
+  patient_ids: string[];
+  period_start: string;
+  period_end: string;
   created_at: string;
 }
