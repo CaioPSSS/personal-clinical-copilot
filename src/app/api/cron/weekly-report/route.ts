@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
       model,
       system: WEEKLY_REPORT_SYSTEM_PROMPT,
       prompt,
-      maxOutputTokens: 6000,
+      maxOutputTokens: 16000,
     });
 
     const reportContent = result.text;

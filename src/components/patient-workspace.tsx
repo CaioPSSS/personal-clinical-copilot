@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +10,7 @@ import { StepUpload } from '@/components/steps/step-upload';
 import { StepAutoNote } from '@/components/steps/step-auto-note';
 import { StepEvidence } from '@/components/steps/step-evidence';
 import { StepChat } from '@/components/steps/step-chat';
+import { EditPatientDialog } from '@/components/edit-patient-dialog';
 import { createClient } from '@/lib/supabase/client';
 import {
   Patient,
@@ -25,6 +27,8 @@ import {
   FlaskConical,
   MessageSquare,
   ArrowLeft,
+  Pencil,
+  Building2,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -45,15 +49,17 @@ export function PatientWorkspace({
   initialChatMessages,
   initialFiles,
 }: PatientWorkspaceProps) {
+  const router = useRouter();
+  const [editOpen, setEditOpen] = useState(false);
   const [medicalRecord, setMedicalRecord] = useState(initialRecord);
   const [transcriptions, setTranscriptions] = useState(initialTranscriptions);
   const [evidenceNote, setEvidenceNote] = useState(initialEvidenceNote);
   const [chatMessages, setChatMessages] = useState(initialChatMessages);
   const [files, setFiles] = useState(() => {
     const recordDate = initialRecord ? new Date(initialRecord.updated_at).getTime() : 0;
-    return initialFiles.map(f => ({
+    return initialFiles.map((f) => ({
       ...f,
-      processed: new Date(f.created_at).getTime() < recordDate
+      processed: new Date(f.created_at).getTime() < recordDate,
     }));
   });
 
@@ -99,11 +105,15 @@ export function PatientWorkspace({
     if (messagesRes.data) setChatMessages(messagesRes.data as ChatMessage[]);
     if (filesRes.data) {
       const dbFiles = filesRes.data as FileRecord[];
-      const recordDate = recordRes.data ? new Date((recordRes.data as MedicalRecord).updated_at).getTime() : 0;
-      setFiles(dbFiles.map(f => ({
-        ...f,
-        processed: new Date(f.created_at).getTime() < recordDate
-      })));
+      const recordDate = recordRes.data
+        ? new Date((recordRes.data as MedicalRecord).updated_at).getTime()
+        : 0;
+      setFiles(
+        dbFiles.map((f) => ({
+          ...f,
+          processed: new Date(f.created_at).getTime() < recordDate,
+        }))
+      );
     }
   }, [patient.id, supabase]);
 
@@ -126,12 +136,29 @@ export function PatientWorkspace({
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold truncate">{patient.full_name}</h1>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold truncate">{patient.full_name}</h1>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-muted-foreground hover:text-primary"
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil className="w-3.5 h-3.5 mr-1" />
+              Editar Dados
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap mt-0.5">
             {age !== null && <span>{age} anos</span>}
             {patient.gender && (
               <Badge variant="secondary" className="text-[10px]">
                 {patient.gender}
+              </Badge>
+            )}
+            {patient.institution && (
+              <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
+                <Building2 className="w-2.5 h-2.5 mr-1" />
+                {patient.institution}
               </Badge>
             )}
             {patient.bed_number && <span>• Leito {patient.bed_number}</span>}
@@ -139,6 +166,13 @@ export function PatientWorkspace({
           </div>
         </div>
       </div>
+
+      <EditPatientDialog
+        patient={patient}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onUpdated={() => router.refresh()}
+      />
 
       {/* 4-Step Tabs */}
       <Tabs defaultValue="upload" className="space-y-6">

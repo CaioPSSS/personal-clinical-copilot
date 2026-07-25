@@ -162,7 +162,11 @@ export function DashboardClient({ initialPatients }: DashboardClientProps) {
               className="animate-slide-up"
               style={{ animationDelay: `${i * 50}ms`, animationFillMode: 'both' }}
             >
-              <PatientCard patient={patient} onDelete={handleDelete} />
+              <PatientCard
+                patient={patient}
+                onDelete={handleDelete}
+                existingInstitutions={existingInstitutions}
+              />
             </div>
           ))}
         </div>
