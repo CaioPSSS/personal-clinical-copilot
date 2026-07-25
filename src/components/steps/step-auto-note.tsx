@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { RoundModal } from '../round-modal';
+import { createClient } from '@/lib/supabase/client';
+import { Patient } from '@/lib/types';
 import {
   FileText,
   Sparkles,
@@ -15,6 +18,7 @@ import {
   RefreshCw,
   CheckCircle2,
   Save,
+  Maximize2,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
@@ -115,6 +119,22 @@ export function StepAutoNote({
   const recordData = medicalRecord?.record_data;
   const hasRecord = recordData && Object.keys(recordData).length > 0;
 
+  const [roundOpen, setRoundOpen] = useState(false);
+  const [patientData, setPatientData] = useState<Patient | null>(null);
+
+  async function openRoundMode() {
+    if (!patientData) {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('id', patientId)
+        .single();
+      if (data) setPatientData(data as Patient);
+    }
+    setRoundOpen(true);
+  }
+
   return (
     <div className="space-y-6 animate-slide-up">
       {/* Action bar */}
@@ -134,6 +154,16 @@ export function StepAutoNote({
               </Badge>
             )}
           </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openRoundMode}
+              className="border-primary/30 text-primary hover:bg-primary/10"
+            >
+              <Maximize2 className="w-4 h-4 mr-2" />
+              Modo Round (Tela Cheia)
+            </Button>
           <Button
             onClick={handleGenerate}
             disabled={isLoading}
@@ -148,6 +178,7 @@ export function StepAutoNote({
             )}
             {hasRecord ? 'Atualizar Prontuário' : 'Gerar Prontuário'}
           </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -258,6 +289,14 @@ export function StepAutoNote({
             e clique em &quot;Gerar Prontuário&quot;.
           </p>
         </div>
+      )}
+      {patientData && (
+        <RoundModal
+          patient={patientData}
+          record={medicalRecord}
+          open={roundOpen}
+          onOpenChange={setRoundOpen}
+        />
       )}
     </div>
   );

@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { AudioWaveform } from '../upload/audio-waveform';
 import {
   Mic,
   ImagePlus,
@@ -18,6 +19,8 @@ import {
   FileText,
   Pencil,
   X,
+  Bookmark,
+  Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -220,9 +223,14 @@ export function StepUpload({
     }
   }
 
+  const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
+  const [markers, setMarkers] = useState<string[]>([]);
+
   async function startRecording() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setAudioStream(stream);
+      setMarkers([]);
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
 
@@ -235,12 +243,12 @@ export function StepUpload({
         const audioBlob = new Blob(chunks, { type: 'audio/webm' });
         const file = new File([audioBlob], `Gravacao_${new Date().getTime()}.webm`, { type: 'audio/webm' });
         
-        // Simular evento de input para reaproveitar a lógica
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
         handleAudioUpload({ target: { files: dataTransfer.files } } as any);
         
         stream.getTracks().forEach(track => track.stop());
+        setAudioStream(null);
       };
 
       mediaRecorder.start();
@@ -251,6 +259,14 @@ export function StepUpload({
       toast.error('Não foi possível acessar o microfone.');
       console.error(err);
     }
+  }
+
+  function addMarker() {
+    const mins = Math.floor(recordingTime / 60).toString().padStart(2, '0');
+    const secs = (recordingTime % 60).toString().padStart(2, '0');
+    const markerText = `[Marcador em ${mins}:${secs}]`;
+    setMarkers((prev) => [...prev, markerText]);
+    toast.info(`Marcador adicionado em ${mins}:${secs}`);
   }
 
   function stopRecording() {
@@ -364,30 +380,63 @@ export function StepUpload({
     <div className="space-y-6 animate-slide-up">
       {/* Upload areas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Gravar Áudio (Navegador) */}
+        {/* Gravar Áudio (Navegador com Waveform) */}
         <Card
-          className={`border-dashed border-2 transition-colors cursor-pointer group ${
-            isRecording ? 'border-red-500/50 bg-red-500/5' : 'hover:border-primary/50'
+          className={`border-dashed border-2 transition-colors group ${
+            isRecording ? 'border-red-500/50 bg-red-500/5' : 'hover:border-primary/50 cursor-pointer'
           }`}
-          onClick={isRecording ? stopRecording : startRecording}
         >
-          <CardContent className="flex flex-col items-center justify-center py-10 text-center h-full relative">
+          <CardContent className="flex flex-col items-center justify-center py-8 text-center h-full relative space-y-3">
             {isRecording ? (
               <>
-                <div className="w-14 h-14 rounded-full bg-red-500/20 flex items-center justify-center mb-4 animate-pulse">
-                  <Square className="w-6 h-6 text-red-500 fill-red-500" />
+                <AudioWaveform stream={audioStream} isRecording={isRecording} />
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                  </span>
+                  <p className="font-semibold text-red-600 text-sm">
+                    Gravando ({Math.floor(recordingTime / 60).toString().padStart(2, '0')}:{(recordingTime % 60).toString().padStart(2, '0')})
+                  </p>
                 </div>
-                <p className="font-medium text-red-600">Gravando... {recordingTime}s</p>
-                <p className="text-xs text-red-500/70 mt-1">Clique para parar e enviar</p>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs border-red-200 text-red-600 hover:bg-red-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addMarker();
+                    }}
+                  >
+                    <Bookmark className="w-3 h-3 mr-1" />
+                    Marcador ({markers.length})
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="text-xs"
+                    onClick={stopRecording}
+                  >
+                    <Square className="w-3 h-3 mr-1 fill-white" />
+                    Parar e Enviar
+                  </Button>
+                </div>
               </>
             ) : (
-              <>
-                <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div
+                className="w-full h-full flex flex-col items-center justify-center cursor-pointer"
+                onClick={startRecording}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                   <Mic className="w-7 h-7 text-red-500" />
                 </div>
                 <p className="font-medium text-foreground">Gravar Áudio</p>
-                <p className="text-xs text-muted-foreground mt-1">Usar microfone agora</p>
-              </>
+                <p className="text-xs text-muted-foreground mt-1">Com visualizador de frequência e marcadores</p>
+              </div>
             )}
           </CardContent>
         </Card>

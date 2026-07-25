@@ -2,8 +2,10 @@ export const SECTION_LABELS: Record<string, string> = {
   identificacao: 'Identificação',
   queixa_principal: 'Queixa Principal',
   historia_doenca_atual: 'História da Moléstia Atual',
+  revisao_de_sistemas: 'Revisão de Sistemas',
   antecedentes_pessoais: 'Antecedentes Pessoais',
   alergias: 'Alergias',
+  medicacoes_em_uso: 'Medicações em Uso',
   medicacoes_uso_continuo: 'Medicação de Uso Contínuo',
   antecedentes_familiares: 'Antecedentes Familiares',
   habitos_de_vida: 'Hábitos de Vida',
@@ -11,5 +13,6 @@ export const SECTION_LABELS: Record<string, string> = {
   evolucao_do_dia: 'Evolução do Dia',
   exames_laboratoriais: 'Exames Laboratoriais',
   exames_imagem: 'Exames de Imagem',
+  hipoteses_diagnosticas: 'Hipóteses Diagnósticas',
   condutas: 'Condutas Feitas/Planejadas',
 };

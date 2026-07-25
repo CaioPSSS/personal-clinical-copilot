@@ -18,13 +18,19 @@ export function formatDateTime(date: string | Date): string {
 
 export function calculateAge(birthDate: string | Date): number {
   const today = new Date();
-  const birth = new Date(birthDate);
+  let birth: Date;
+  if (typeof birthDate === 'string' && birthDate.includes('-')) {
+    const [year, month, day] = birthDate.split('T')[0].split('-').map(Number);
+    birth = new Date(year, month - 1, day);
+  } else {
+    birth = new Date(birthDate);
+  }
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
     age--;
   }
-  return age;
+  return Math.max(0, age);
 }
 
 export function getInitials(name: string): string {

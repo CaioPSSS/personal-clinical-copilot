@@ -146,13 +146,18 @@ export function EditPatientDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit_date_of_birth">Data de Nascimento</Label>
-              <Input
-                id="edit_date_of_birth"
-                name="date_of_birth"
-                type="date"
-                defaultValue={patient.date_of_birth || ''}
-              />
+              <Label htmlFor="edit_status">Status / Triagem</Label>
+              <select
+                id="edit_status"
+                name="status"
+                defaultValue={patient.status || 'estavel'}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="estavel">🟢 Estável</option>
+                <option value="atencao">🟡 Em Atenção / Investigação</option>
+                <option value="critico">🔴 Crítico / UTI</option>
+                <option value="alta">🔵 Alta Prevista</option>
+              </select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit_gender">Gênero</Label>
@@ -192,14 +197,25 @@ export function EditPatientDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="edit_contact_phone">Telefone</Label>
-            <Input
-              id="edit_contact_phone"
-              name="contact_phone"
-              defaultValue={patient.contact_phone || ''}
-              placeholder="(71) 99999-0000"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit_date_of_birth">Data de Nascimento</Label>
+              <Input
+                id="edit_date_of_birth"
+                name="date_of_birth"
+                type="date"
+                defaultValue={patient.date_of_birth || ''}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_contact_phone">Telefone</Label>
+              <Input
+                id="edit_contact_phone"
+                name="contact_phone"
+                defaultValue={patient.contact_phone || ''}
+                placeholder="(71) 99999-0000"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

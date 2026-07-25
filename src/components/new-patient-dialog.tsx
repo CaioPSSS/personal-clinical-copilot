@@ -129,8 +129,18 @@ export function NewPatientDialog({ onCreated, existingInstitutions = [] }: NewPa
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date_of_birth">Data de Nascimento</Label>
-              <Input id="date_of_birth" name="date_of_birth" type="date" />
+              <Label htmlFor="status">Status / Triagem</Label>
+              <select
+                id="status"
+                name="status"
+                defaultValue="estavel"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="estavel">🟢 Estável</option>
+                <option value="atencao">🟡 Em Atenção / Investigação</option>
+                <option value="critico">🔴 Crítico / UTI</option>
+                <option value="alta">🔵 Alta Prevista</option>
+              </select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="gender">Gênero</Label>
@@ -159,9 +169,15 @@ export function NewPatientDialog({ onCreated, existingInstitutions = [] }: NewPa
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="contact_phone">Telefone</Label>
-            <Input id="contact_phone" name="contact_phone" placeholder="(71) 99999-0000" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="date_of_birth">Data de Nascimento</Label>
+              <Input id="date_of_birth" name="date_of_birth" type="date" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact_phone">Telefone</Label>
+              <Input id="contact_phone" name="contact_phone" placeholder="(71) 99999-0000" />
+            </div>
           </div>
 
           <div className="space-y-2">

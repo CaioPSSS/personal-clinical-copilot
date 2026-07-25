@@ -74,7 +74,7 @@ export function PatientWorkspace({
           .eq('patient_id', patient.id)
           .order('version', { ascending: false })
           .limit(1)
-          .single(),
+          .maybeSingle(),
         supabase
           .from('transcriptions')
           .select('*')
@@ -86,7 +86,7 @@ export function PatientWorkspace({
           .eq('patient_id', patient.id)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single(),
+          .maybeSingle(),
         supabase
           .from('chat_messages')
           .select('*')

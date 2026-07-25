@@ -8,7 +8,7 @@ import { PatientCard } from '@/components/patient-card';
 import { NewPatientDialog } from '@/components/new-patient-dialog';
 import { deletePatient } from './actions';
 import { Patient } from '@/lib/types';
-import { Search, Users, Building2, FilterX } from 'lucide-react';
+import { Search, Users, Building2, FilterX, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface DashboardClientProps {
@@ -36,6 +36,14 @@ export function DashboardClient({ initialPatients }: DashboardClientProps) {
     );
   };
 
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+
+  const toggleStatus = (st: string) => {
+    setSelectedStatuses((prev) =>
+      prev.includes(st) ? prev.filter((s) => s !== st) : [...prev, st]
+    );
+  };
+
   const filtered = initialPatients.filter((p) => {
     const matchesSearch =
       p.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -46,7 +54,11 @@ export function DashboardClient({ initialPatients }: DashboardClientProps) {
       selectedInstitutions.length === 0 ||
       (p.institution && selectedInstitutions.includes(p.institution));
 
-    return matchesSearch && matchesInst;
+    const pStatus = p.status || 'estavel';
+    const matchesStatus =
+      selectedStatuses.length === 0 || selectedStatuses.includes(pStatus);
+
+    return matchesSearch && matchesInst && matchesStatus;
   });
 
   async function handleDelete(id: string) {
@@ -91,7 +103,34 @@ export function DashboardClient({ initialPatients }: DashboardClientProps) {
           />
         </div>
 
-        {/* Filtro Multi-Select por Instituição */}
+        {/* Filtro por Status / Triagem */}
+        <div className="flex items-center gap-2 flex-wrap text-xs pt-1">
+          <span className="text-muted-foreground font-medium flex items-center gap-1">
+            <Activity className="w-3.5 h-3.5" />
+            Gravidade:
+          </span>
+          {[
+            { id: 'estavel', label: '🟢 Estável' },
+            { id: 'atencao', label: '🟡 Em Atenção' },
+            { id: 'critico', label: '🔴 Crítico / UTI' },
+            { id: 'alta', label: '🔵 Alta Prevista' },
+          ].map((st) => {
+            const count = initialPatients.filter((p) => (p.status || 'estavel') === st.id).length;
+            const isSelected = selectedStatuses.includes(st.id);
+            return (
+              <Badge
+                key={st.id}
+                variant={isSelected ? 'default' : 'outline'}
+                className={`cursor-pointer transition-all hover:opacity-90 ${
+                  isSelected ? 'bg-primary text-primary-foreground' : 'hover:bg-primary/10'
+                }`}
+                onClick={() => toggleStatus(st.id)}
+              >
+                {st.label} ({count})
+              </Badge>
+            );
+          })}
+        </div>
         {existingInstitutions.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap text-xs pt-1">
             <span className="text-muted-foreground font-medium flex items-center gap-1">

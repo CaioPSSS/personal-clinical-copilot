@@ -55,11 +55,11 @@ export function StepChat({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
   const { messages, status, setMessages, sendMessage, addToolResult } = useChat({
+    messages: dbMessages,
     transport: new DefaultChatTransport({
       api: '/api/chat',
       body: { patientId },
     }),
-    messages: dbMessages,
   });
 
   const isLoading = status === 'submitted' || status === 'streaming';

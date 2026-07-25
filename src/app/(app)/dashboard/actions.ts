@@ -15,6 +15,7 @@ export async function createPatient(formData: FormData) {
     user_id: user.id,
     full_name: formData.get('full_name') as string,
     institution: (formData.get('institution') as string) || null,
+    status: (formData.get('status') as string) || 'estavel',
     date_of_birth: (formData.get('date_of_birth') as string) || null,
     gender: (formData.get('gender') as string) || null,
     contact_phone: (formData.get('contact_phone') as string) || null,
@@ -42,6 +43,7 @@ export async function updatePatient(patientId: string, formData: FormData) {
     .update({
       full_name: formData.get('full_name') as string,
       institution: (formData.get('institution') as string) || null,
+      status: (formData.get('status') as string) || 'estavel',
       date_of_birth: (formData.get('date_of_birth') as string) || null,
       gender: (formData.get('gender') as string) || null,
       contact_phone: (formData.get('contact_phone') as string) || null,

@@ -49,23 +49,43 @@ export function PatientCard({ patient, onDelete, existingInstitutions = [] }: Pa
                     {patient.full_name}
                   </h3>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    {age !== null && (
-                      <span className="text-xs text-muted-foreground">
-                        {age} anos
-                      </span>
-                    )}
-                    {patient.gender && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                        {patient.gender}
-                      </Badge>
-                    )}
-                    {patient.institution && (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">
-                        <Building2 className="w-2.5 h-2.5 mr-1" />
-                        {patient.institution}
-                      </Badge>
-                    )}
-                  </div>
+                  {age !== null && (
+                    <span className="text-xs text-muted-foreground">
+                      {age} anos
+                    </span>
+                  )}
+                  {patient.gender && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                      {patient.gender}
+                    </Badge>
+                  )}
+                  {patient.status === 'critico' && (
+                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0 bg-red-600">
+                      🔴 Crítico / UTI
+                    </Badge>
+                  )}
+                  {patient.status === 'atencao' && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-yellow-500/20 text-yellow-600 border border-yellow-500/30">
+                      🟡 Em Atenção
+                    </Badge>
+                  )}
+                  {patient.status === 'alta' && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-500/20 text-blue-600 border border-blue-500/30">
+                      🔵 Alta Prevista
+                    </Badge>
+                  )}
+                  {(!patient.status || patient.status === 'estavel') && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-500/30 text-green-600">
+                      🟢 Estável
+                    </Badge>
+                  )}
+                  {patient.institution && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">
+                      <Building2 className="w-2.5 h-2.5 mr-1" />
+                      {patient.institution}
+                    </Badge>
+                  )}
+                </div>
                 </div>
               </div>
 

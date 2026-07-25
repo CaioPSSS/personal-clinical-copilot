@@ -33,7 +33,7 @@ export default async function PatientPage(props: {
         .eq('patient_id', id)
         .order('version', { ascending: false })
         .limit(1)
-        .single(),
+        .maybeSingle(),
       supabase
         .from('transcriptions')
         .select('*')
@@ -45,7 +45,7 @@ export default async function PatientPage(props: {
         .eq('patient_id', id)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single(),
+        .maybeSingle(),
       supabase
         .from('chat_messages')
         .select('*')

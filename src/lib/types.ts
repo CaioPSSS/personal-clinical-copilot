@@ -1,8 +1,11 @@
+export type PatientStatus = 'estavel' | 'atencao' | 'critico' | 'alta';
+
 export interface Patient {
   id: string;
   user_id: string;
   full_name: string;
   institution: string | null;
+  status: PatientStatus | null;
   date_of_birth: string | null;
   gender: string | null;
   contact_phone: string | null;

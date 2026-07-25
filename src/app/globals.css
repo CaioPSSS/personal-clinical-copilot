@@ -169,30 +169,30 @@
 }
 
 .glass {
-  background: hsl(var(--card) / 0.7);
+  background: color-mix(in oklch, var(--card) 75%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid hsl(var(--border) / 0.5);
+  border: 1px solid color-mix(in oklch, var(--border) 50%, transparent);
 }
 
 .gradient-primary {
-  background: linear-gradient(135deg, hsl(173 80% 40%), hsl(200 80% 50%));
+  background: linear-gradient(135deg, oklch(0.65 0.18 180), oklch(0.55 0.20 230));
 }
 
 .gradient-bg {
-  background: radial-gradient(ellipse at top, hsl(var(--muted)) 0%, hsl(var(--background)) 70%);
+  background: radial-gradient(ellipse at top, var(--muted) 0%, var(--background) 70%);
 }
 
 /* Scrollbar customizada */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: hsl(var(--muted)); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }
+::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in oklch, var(--muted-foreground) 50%, transparent); }
 
 /* Markdown renderizado */
-.prose-medical h2 { font-size: 1.1rem; font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.5rem; color: hsl(var(--primary)); }
+.prose-medical h2 { font-size: 1.1rem; font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.5rem; color: var(--primary); }
 .prose-medical h3 { font-size: 1rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.35rem; }
 .prose-medical p { margin-bottom: 0.5rem; line-height: 1.6; }
 .prose-medical ul { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
 .prose-medical li { margin-bottom: 0.25rem; }
-.prose-medical strong { color: hsl(var(--foreground)); }
+.prose-medical strong { color: var(--foreground); }
