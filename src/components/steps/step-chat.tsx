@@ -361,9 +361,33 @@ export function StepChat({
             </div>
           </ScrollArea>
 
-          {/* Input */}
+          {/* Chips de perguntas sugeridas rápidas */}
+          <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto border-t bg-muted/20 no-scrollbar">
+            {[
+              '📍 Parede acometida / ECG',
+              '💊 Medicações em uso',
+              '🧪 Exames laboratoriais',
+              '⚠️ Alergias do paciente',
+              '📋 Resumir condutas',
+            ].map((suggested) => (
+              <Button
+                key={suggested}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs h-7 shrink-0 rounded-full bg-card hover:bg-primary/10 hover:text-primary border-border/60 transition-colors"
+                onClick={() => {
+                  setInput(suggested);
+                  sendMessage({ role: 'user', content: suggested } as any);
+                }}
+              >
+                {suggested}
+              </Button>
+            ))}
+          </div>
+
           {/* Footer com input */}
-          <div className="p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t">
+          <div className="p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <form
               onSubmit={handleSubmit}
               className="flex flex-col sm:flex-row gap-3 relative"

@@ -88,11 +88,20 @@ export async function POST(req: Request) {
       evidenceRes.data?.content || null
     );
 
-    // Mapear manualmente para garantir que apenas role e content/parts válidos existam
-    const coreMessages = messages.map((m: any) => ({
-      role: m.role,
-      content: m.content || '',
-    }));
+    // Mapear manualmente para garantir que o texto de mensagens de UI (content ou parts) seja extraído
+    const coreMessages = messages.map((m: any) => {
+      let textContent = typeof m.content === 'string' ? m.content : '';
+      if (!textContent && Array.isArray(m.parts)) {
+        textContent = m.parts
+          .filter((p: any) => p.type === 'text' && p.text)
+          .map((p: any) => p.text)
+          .join('\n');
+      }
+      return {
+        role: m.role,
+        content: textContent,
+      };
+    });
 
     const result = streamText({
       model: withFallback(
