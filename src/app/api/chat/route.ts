@@ -95,7 +95,9 @@ export async function POST(req: Request) {
         openrouter.chat('google/gemma-4-31b-it'),
         openrouter.chat('qwen/qwen3.6-35b-a3b'),
         openrouter.chat('google/gemma-4-26b-a4b-it'),
-        openrouter.chat('google/gemma-3-27b')
+        openrouter.chat('google/gemma-3-27b-it'),
+        openrouter.chat('meta-llama/llama-3.3-70b-instruct'),
+        openrouter.chat('deepseek/deepseek-chat')
       ),
       system: systemPrompt,
       messages: coreMessages,

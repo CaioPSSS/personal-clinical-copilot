@@ -1,10 +1,9 @@
 import type { LanguageModel } from 'ai';
 
 /**
- * Encapsula múltiplos modelos de IA com fallback em cascata inteligente.
- * Tenta os modelos em ordem e faz fallback automático se:
- * 1. O modelo falhar na inicialização/chamada (ex: 429 Rate Limit, 503 Unavailable).
- * 2. O modelo responder com texto/resultado vazio (ex: 0 tokens / resposta em branco).
+ * Encapsula múltiplos modelos de IA com fallback em cascata e retentativas duplas (2x por modelo).
+ * Tenta até 2 vezes cada modelo. Se o modelo falhar (HTTP error) ou retornar texto vazio/0 tokens,
+ * aguarda 250ms e tenta novamente antes de saltar para o próximo modelo da lista.
  */
 export function withFallback(...args: any[]): any {
   const models = args.filter(Boolean);
@@ -17,25 +16,40 @@ export function withFallback(...args: any[]): any {
     return models[0];
   }
 
+  const RETRIES_PER_MODEL = 2;
+
   return {
     ...models[0],
     async doGenerate(options: any) {
       let lastError: any;
       for (let i = 0; i < models.length; i++) {
-        try {
-          const res = await models[i].doGenerate(options);
-          // Verificar se o modelo gerou texto não-vazio
-          if (res && res.text && res.text.trim().length > 0) {
-            return res;
+        const model = models[i];
+        const modelName = model.modelId || `Modelo ${i}`;
+
+        for (let attempt = 1; attempt <= RETRIES_PER_MODEL; attempt++) {
+          try {
+            const res = await model.doGenerate(options);
+            if (res && res.text && res.text.trim().length > 0) {
+              return res;
+            }
+            console.warn(
+              `[AI Fallback] ${modelName} (tentativa ${attempt}/${RETRIES_PER_MODEL}) retornou texto vazio.`
+            );
+          } catch (err) {
+            lastError = err;
+            console.warn(
+              `[AI Fallback] ${modelName} (tentativa ${attempt}/${RETRIES_PER_MODEL}) falhou:`,
+              err
+            );
           }
-          console.warn(`[AI Fallback] Modelo ${i} (${models[i].modelId || 'desconhecido'}) retornou resposta sem texto. Tentando próximo modelo...`);
-        } catch (err) {
-          lastError = err;
-          console.warn(`[AI Fallback] Modelo ${i} falhou em doGenerate:`, err);
+
+          if (attempt < RETRIES_PER_MODEL) {
+            await new Promise((resolve) => setTimeout(resolve, 250));
+          }
         }
       }
       if (lastError) throw lastError;
-      throw new Error('[AI Fallback] Nenhum modelo retornou texto válido.');
+      throw new Error('[AI Fallback] Nenhum modelo retornou texto válido após retentativas.');
     },
 
     async doStream(options: any) {
@@ -43,76 +57,88 @@ export function withFallback(...args: any[]): any {
       for (let i = 0; i < models.length; i++) {
         const currentModel = models[i];
         const isLast = i === models.length - 1;
+        const modelName = currentModel.modelId || `Modelo ${i}`;
 
-        try {
-          const result = await currentModel.doStream(options);
+        for (let attempt = 1; attempt <= RETRIES_PER_MODEL; attempt++) {
+          try {
+            const result = await currentModel.doStream(options);
 
-          if (isLast) {
-            return result;
-          }
-
-          // Inspecionar os primeiros chunks do stream para confirmar a presença de conteúdo real
-          const reader = result.stream.getReader();
-          const bufferedChunks: any[] = [];
-          let hasContent = false;
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-              break;
+            if (isLast && attempt === RETRIES_PER_MODEL) {
+              return result;
             }
 
-            bufferedChunks.push(value);
+            // Inspecionar os primeiros chunks do stream para confirmar a presença de conteúdo real
+            const reader = result.stream.getReader();
+            const bufferedChunks: any[] = [];
+            let hasContent = false;
 
-            if (value.type === 'text-delta' || value.type === 'tool-call') {
-              hasContent = true;
-              break;
-            }
-
-            if (value.type === 'error') {
-              break;
-            }
-          }
-
-          if (!hasContent) {
-            console.warn(
-              `[AI Fallback] Modelo ${i} (${currentModel.modelId || 'desconhecido'}) encerrou stream sem conteúdo. Tentando próximo modelo...`
-            );
-            reader.releaseLock();
-            continue;
-          }
-
-          const passthroughStream = new ReadableStream({
-            async start(controller) {
-              for (const chunk of bufferedChunks) {
-                controller.enqueue(chunk);
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) {
+                break;
               }
-              try {
-                while (true) {
-                  const { done, value } = await reader.read();
-                  if (done) {
-                    controller.close();
-                    break;
-                  }
-                  controller.enqueue(value);
+
+              bufferedChunks.push(value);
+
+              if (value.type === 'text-delta' || value.type === 'tool-call') {
+                hasContent = true;
+                break;
+              }
+
+              if (value.type === 'error') {
+                break;
+              }
+            }
+
+            if (!hasContent) {
+              console.warn(
+                `[AI Fallback] ${modelName} (tentativa ${attempt}/${RETRIES_PER_MODEL}) encerrou stream sem conteúdo.`
+              );
+              reader.releaseLock();
+              if (attempt < RETRIES_PER_MODEL) {
+                await new Promise((resolve) => setTimeout(resolve, 250));
+                continue;
+              }
+              break; // Pula para o próximo modelo se esgotou as retentativas
+            }
+
+            const passthroughStream = new ReadableStream({
+              async start(controller) {
+                for (const chunk of bufferedChunks) {
+                  controller.enqueue(chunk);
                 }
-              } catch (err) {
-                controller.error(err);
-              }
-            },
-            cancel(reason) {
-              reader.cancel(reason);
-            },
-          });
+                try {
+                  while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                      controller.close();
+                      break;
+                    }
+                    controller.enqueue(value);
+                  }
+                } catch (err) {
+                  controller.error(err);
+                }
+              },
+              cancel(reason) {
+                reader.cancel(reason);
+              },
+            });
 
-          return {
-            ...result,
-            stream: passthroughStream,
-          };
-        } catch (err) {
-          lastError = err;
-          console.warn(`[AI Fallback] Modelo ${i} falhou na inicialização do stream (doStream):`, err);
-          if (isLast) throw err;
+            return {
+              ...result,
+              stream: passthroughStream,
+            };
+          } catch (err) {
+            lastError = err;
+            console.warn(
+              `[AI Fallback] ${modelName} (tentativa ${attempt}/${RETRIES_PER_MODEL}) falhou no doStream:`,
+              err
+            );
+            if (attempt < RETRIES_PER_MODEL) {
+              await new Promise((resolve) => setTimeout(resolve, 250));
+            }
+          }
         }
       }
       throw lastError;
