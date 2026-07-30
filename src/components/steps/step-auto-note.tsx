@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useCompletion } from '@ai-sdk/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -57,26 +56,11 @@ export function StepAutoNote({
 }: StepAutoNoteProps) {
   const [generated, setGenerated] = useState(false);
   const [editedNote, setEditedNote] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const pendingTranscriptions = transcriptions.filter((t) => !t.processed);
   const pendingFiles = files?.filter((f) => !f.processed && f.file_type.startsWith('image')) || [];
-
-  const { completion, isLoading, complete } = useCompletion({
-    api: '/api/generate-note',
-    body: { patientId },
-    onFinish: (_, text) => {
-      if (!text || text.trim().length === 0) {
-        toast.error('Nenhum texto foi gerado pela IA. Por favor, tente novamente.');
-        return;
-      }
-      setEditedNote(text);
-      toast.success('Prontuário gerado. Por favor, revise o texto abaixo antes de salvar.');
-    },
-    onError: (err) => {
-      toast.error('Erro ao gerar prontuário: ' + (err.message || 'Falha de comunicação com o servidor.'));
-    },
-  });
 
   async function handleSave() {
     setIsSaving(true);
@@ -105,19 +89,38 @@ export function StepAutoNote({
 
   async function handleGenerate() {
     setGenerated(false);
-    const allPendingText = pendingTranscriptions
-      .map((t) => t.transcript_text)
-      .join('\n\n---\n\n');
+    setIsGenerating(true);
 
-    const imagePaths = pendingFiles.map((f) => f.storage_path);
+    try {
+      const allPendingText = pendingTranscriptions
+        .map((t) => t.transcript_text)
+        .join('\n\n---\n\n');
 
-    await complete('', {
-      body: { 
-        patientId, 
-        transcriptText: allPendingText,
-        imagePaths: imagePaths.length > 0 ? imagePaths : undefined 
-      },
-    });
+      const imagePaths = pendingFiles.map((f) => f.storage_path);
+
+      const res = await fetch('/api/generate-note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId,
+          transcriptText: allPendingText,
+          imagePaths: imagePaths.length > 0 ? imagePaths : undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.text || data.text.trim().length === 0) {
+        throw new Error(data.error || 'Nenhum texto foi gerado pela IA. Por favor, tente novamente.');
+      }
+
+      setEditedNote(data.text);
+      toast.success('Prontuário gerado. Por favor, revise o texto abaixo antes de salvar.');
+    } catch (err: any) {
+      toast.error('Erro ao gerar prontuário: ' + (err.message || 'Falha de comunicação com o servidor.'));
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   const recordData = medicalRecord?.record_data;
@@ -170,10 +173,10 @@ export function StepAutoNote({
             </Button>
           <Button
             onClick={handleGenerate}
-            disabled={isLoading}
+            disabled={isGenerating}
             className="gradient-primary text-white hover:opacity-90"
           >
-            {isLoading ? (
+            {isGenerating ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" />
             ) : hasRecord ? (
               <RefreshCw className="w-4 h-4 mr-2" />
@@ -186,8 +189,8 @@ export function StepAutoNote({
         </CardContent>
       </Card>
 
-      {/* Streaming output */}
-      {isLoading && (
+      {/* Loading output */}
+      {isGenerating && (
         <Card className="border-primary/30">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -196,17 +199,15 @@ export function StepAutoNote({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[400px]">
-              <div className="prose-medical prose-sm text-sm whitespace-pre-wrap dark:prose-invert">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{completion}</ReactMarkdown>
-              </div>
-            </ScrollArea>
+            <div className="py-12 text-center text-sm text-muted-foreground">
+              A IA está analisando as transcrições e gerando o prontuário. Por favor, aguarde alguns segundos...
+            </div>
           </CardContent>
         </Card>
       )}
 
       {/* Review output */}
-      {!isLoading && editedNote && !generated && (
+      {!isGenerating && editedNote && !generated && (
         <Card className="border-yellow-500/30">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2 text-yellow-500">
@@ -236,7 +237,7 @@ export function StepAutoNote({
       )}
 
       {/* Generated success */}
-      {generated && !isLoading && !editedNote && (
+      {generated && !isGenerating && !editedNote && (
         <Card className="border-green-500/30">
           <CardContent className="flex items-center gap-3 py-4">
             <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -248,7 +249,7 @@ export function StepAutoNote({
       )}
 
       {/* Prontuário atual */}
-      {hasRecord && !isLoading && (
+      {hasRecord && !isGenerating && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -285,7 +286,7 @@ export function StepAutoNote({
       )}
 
       {/* Empty state */}
-      {!hasRecord && !isLoading && !completion && (
+      {!hasRecord && !isGenerating && !editedNote && (
         <div className="text-center py-16">
           <FileText className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
           <p className="text-muted-foreground">

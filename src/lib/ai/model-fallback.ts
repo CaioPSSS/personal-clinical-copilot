@@ -3,8 +3,8 @@ import type { LanguageModel } from 'ai';
 /**
  * Encapsula múltiplos modelos de IA com fallback em cascata inteligente.
  * Tenta os modelos em ordem e faz fallback automático se:
- * 1. O modelo falhar na inicialização/handshake HTTP (ex: 429 Rate Limit, 503 Unavailable).
- * 2. O stream conectar com HTTP 200 (ex: provedor Crusoe em 29ms), mas encerrar sem produzir nenhum conteúdo (0 tokens/erro).
+ * 1. O modelo falhar na inicialização/chamada (ex: 429 Rate Limit, 503 Unavailable).
+ * 2. O modelo responder com texto/resultado vazio (ex: 0 tokens / resposta em branco).
  */
 export function withFallback(...args: any[]): any {
   const models = args.filter(Boolean);
@@ -23,13 +23,19 @@ export function withFallback(...args: any[]): any {
       let lastError: any;
       for (let i = 0; i < models.length; i++) {
         try {
-          return await models[i].doGenerate(options);
+          const res = await models[i].doGenerate(options);
+          // Verificar se o modelo gerou texto não-vazio
+          if (res && res.text && res.text.trim().length > 0) {
+            return res;
+          }
+          console.warn(`[AI Fallback] Modelo ${i} (${models[i].modelId || 'desconhecido'}) retornou resposta sem texto. Tentando próximo modelo...`);
         } catch (err) {
           lastError = err;
-          console.warn(`[AI Fallback] Modelo ${i} falhou em doGenerate, tentando próximo modelo:`, err);
+          console.warn(`[AI Fallback] Modelo ${i} falhou em doGenerate:`, err);
         }
       }
-      throw lastError;
+      if (lastError) throw lastError;
+      throw new Error('[AI Fallback] Nenhum modelo retornou texto válido.');
     },
 
     async doStream(options: any) {
@@ -60,24 +66,22 @@ export function withFallback(...args: any[]): any {
 
             if (value.type === 'text-delta' || value.type === 'tool-call') {
               hasContent = true;
-              break; // Conteúdo confirmado! Pode encerrar o buffer e transmitir.
+              break;
             }
 
             if (value.type === 'error') {
-              break; // Stream retornou um objeto de erro
+              break;
             }
           }
 
-          // Se o stream fechou ou deu erro sem emitir nenhum token de texto/ferramenta:
           if (!hasContent) {
             console.warn(
-              `[AI Fallback] Modelo ${i} (${currentModel.modelId || 'desconhecido'}) encerrou stream sem conteúdo (resposta vazia/200 instantâneo). Tentando próximo modelo...`
+              `[AI Fallback] Modelo ${i} (${currentModel.modelId || 'desconhecido'}) encerrou stream sem conteúdo. Tentando próximo modelo...`
             );
             reader.releaseLock();
-            continue; // Tenta o próximo modelo do fallback!
+            continue;
           }
 
-          // Se houve conteúdo válido, recria o stream retransmitindo o buffer e o restante do leitor
           const passthroughStream = new ReadableStream({
             async start(controller) {
               for (const chunk of bufferedChunks) {

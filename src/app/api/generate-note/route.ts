@@ -1,5 +1,6 @@
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { streamText } from 'ai';
+import { generateText } from 'ai';
+import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withFallback } from '@/lib/ai/model-fallback';
 import { formatRecordDataToText } from '@/lib/record-parser';
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return new Response('Não autenticado', { status: 401 });
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
     // Buscar prontuário atual (se existir)
@@ -81,7 +82,7 @@ export async function POST(req: Request) {
       },
     ];
 
-    const result = streamText({
+    const result = await generateText({
       model: withFallback(
         openrouter.chat('google/gemma-4-31b-it:free'),
         openrouter.chat('google/gemma-4-31b-it'),
@@ -93,9 +94,19 @@ export async function POST(req: Request) {
       messages: messages,
     });
 
-    return result.toTextStreamResponse();
-  } catch (error) {
+    if (!result.text || result.text.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'A IA não gerou nenhum texto. Tente novamente.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ text: result.text });
+  } catch (error: any) {
     console.error('Erro na geração do prontuário:', error);
-    return new Response('Erro interno', { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Erro interno na geração do prontuário.' },
+      { status: 500 }
+    );
   }
 }
