@@ -108,6 +108,12 @@ export function StepAutoNote({
         }),
       });
 
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const rawText = await res.text();
+        throw new Error(`Resposta do servidor (${res.status}): ${rawText.slice(0, 80)}`);
+      }
+
       const data = await res.json();
 
       if (!res.ok || !data.text || data.text.trim().length === 0) {

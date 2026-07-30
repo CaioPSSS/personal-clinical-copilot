@@ -96,14 +96,16 @@ export async function POST(req: Request) {
       messages: messages,
     });
 
-    if (!result.text || result.text.trim().length === 0) {
+    const textOutput = result.text || (result as any).reasoning || '';
+
+    if (!textOutput || textOutput.trim().length === 0) {
       return NextResponse.json(
-        { error: 'A IA não gerou nenhum texto. Tente novamente.' },
+        { error: 'A IA não gerou nenhum conteúdo. Tente novamente.' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ text: result.text });
+    return NextResponse.json({ text: textOutput });
   } catch (error: any) {
     console.error('Erro na geração do prontuário:', error);
     return NextResponse.json(
