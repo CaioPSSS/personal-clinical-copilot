@@ -85,8 +85,8 @@ export async function POST(req: Request) {
       model: withFallback(
         openrouter.chat('google/gemma-4-31b-it:free'),
         openrouter.chat('google/gemma-4-31b-it'),
-        openrouter.chat('google/gemma-4-26b-a4b-it'),
         openrouter.chat('qwen/qwen3.6-35b-a3b'),
+        openrouter.chat('google/gemma-4-26b-a4b-it'),
         openrouter.chat('google/gemma-3-27b')
       ),
       system: AUTO_NOTE_SYSTEM_PROMPT,
