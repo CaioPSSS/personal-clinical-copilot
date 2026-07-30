@@ -66,11 +66,15 @@ export function StepAutoNote({
     api: '/api/generate-note',
     body: { patientId },
     onFinish: (_, text) => {
+      if (!text || text.trim().length === 0) {
+        toast.error('Nenhum texto foi gerado pela IA. Por favor, tente novamente.');
+        return;
+      }
       setEditedNote(text);
       toast.success('Prontuário gerado. Por favor, revise o texto abaixo antes de salvar.');
     },
     onError: (err) => {
-      toast.error('Erro ao gerar prontuário: ' + err.message);
+      toast.error('Erro ao gerar prontuário: ' + (err.message || 'Falha de comunicação com o servidor.'));
     },
   });
 

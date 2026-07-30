@@ -3,27 +3,13 @@ import { streamText } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { buildChatSystemPrompt } from '@/lib/prompts/chat';
+import { withFallback } from '@/lib/ai/model-fallback';
 
 export const maxDuration = 300;
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
 });
-
-// Custom proxy para lidar com falhas de rate limit no Vercel AI SDK
-function withFallback(primary: any, fallbackModel: any): any {
-  return {
-    ...primary,
-    async doGenerate(options: any) {
-      try { return await primary.doGenerate(options); }
-      catch (err) { return await fallbackModel.doGenerate(options); }
-    },
-    async doStream(options: any) {
-      try { return await primary.doStream(options); }
-      catch (err) { return await fallbackModel.doStream(options); }
-    }
-  };
-}
 
 export async function POST(req: Request) {
   try {
@@ -105,8 +91,11 @@ export async function POST(req: Request) {
 
     const result = streamText({
       model: withFallback(
+        openrouter.chat('google/gemma-4-31b-it:free'),
         openrouter.chat('google/gemma-4-31b-it'),
-        openrouter.chat('google/gemma-4-26b-a4b-it')
+        openrouter.chat('google/gemma-4-26b-a4b-it'),
+        openrouter.chat('qwen/qwen3.6-35b-a3b'),
+        openrouter.chat('google/gemma-3-27b')
       ),
       system: systemPrompt,
       messages: coreMessages,

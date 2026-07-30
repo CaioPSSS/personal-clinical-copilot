@@ -1,29 +1,15 @@
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { streamText, tool } from 'ai';
-import { z } from 'zod';
+import { streamText } from 'ai';
 import { createClient } from '@/lib/supabase/server';
 import { EVIDENCE_NOTE_SYSTEM_PROMPT } from '@/lib/prompts/evidence-note';
+import { withFallback } from '@/lib/ai/model-fallback';
+import { getDynamicConductModels } from '@/lib/ai/dynamic-models';
 
 export const maxDuration = 300;
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
 });
-
-// Custom proxy para lidar com falhas de rate limit no Vercel AI SDK
-function withFallback(primary: any, fallbackModel: any): any {
-  return {
-    ...primary,
-    async doGenerate(options: any) {
-      try { return await primary.doGenerate(options); }
-      catch (err) { return await fallbackModel.doGenerate(options); }
-    },
-    async doStream(options: any) {
-      try { return await primary.doStream(options); }
-      catch (err) { return await fallbackModel.doStream(options); }
-    }
-  };
-}
 
 export async function POST(req: Request) {
   try {
@@ -79,11 +65,11 @@ export async function POST(req: Request) {
         .join('\n\n');
     }
 
+    // Obter dinamicamente os modelos ordenados por preço atual da OpenRouter
+    const dynamicModels = await getDynamicConductModels();
+
     const result = streamText({
-      model: withFallback(
-        openrouter.chat('deepseek/deepseek-v4-pro'),
-        openrouter.chat('minimax/minimax-m3')
-      ),
+      model: withFallback(...dynamicModels),
       system: EVIDENCE_NOTE_SYSTEM_PROMPT,
       prompt: `Analise o seguinte caso clínico e gere a conduta baseada em evidências:\n\n${recordText}`,
       tools: {
