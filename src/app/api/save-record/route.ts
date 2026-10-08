@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Salvar prontuário (criando nova versão no histórico com record_text)
     if (existing) {
-      await supabase
+      let { error: updateErr } = await supabase
         .from('medical_records')
         .update({
           record_text: text,
@@ -47,8 +47,19 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
+
+      if (updateErr && updateErr.message?.includes('schema cache')) {
+        await supabase
+          .from('medical_records')
+          .update({
+            record_data: recordData,
+            version: newVersion,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+      }
     } else {
-      await supabase.from('medical_records').insert({
+      let { error: insertErr } = await supabase.from('medical_records').insert({
         user_id: user.id,
         patient_id: patientId,
         record_text: text,
@@ -56,6 +67,15 @@ export async function POST(req: NextRequest) {
         record_mode: (recordMode as RecordMode) || 'enfermaria',
         version: 1,
       });
+
+      if (insertErr && insertErr.message?.includes('schema cache')) {
+        await supabase.from('medical_records').insert({
+          user_id: user.id,
+          patient_id: patientId,
+          record_data: recordData,
+          version: 1,
+        });
+      }
     }
 
     // 4. Marcar transcrições como processadas
