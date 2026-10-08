@@ -1,0 +1,8 @@
+export const MEDICAL_ABBREVIATIONS_GUIDE = `
+GLOSSÁRIO DE SIGLAS MÉDICAS BRASILEIRAS (Use livremente sem precisar expandir por extenso):
+- Respiratório: MVBD SEM RA (Murmúrio Vesicular Bem Distribuído Sem Ruídos Adventícios), IOT/TOT (Intubação/Tubo Orotraqueal), TQT (Traqueostomia), VM (Ventilação Mecânica: VCV, PCV, PSV), PEEP, FIO2, AA (Ar Ambiente), CN (Cateter Nasal), MNR (Máscara Não Reinalante), PCONT (Pressão Controlada).
+- Cardiovascular: BRNF EM 2T (Bulhas Rítmicas Normofonéticas em 2 Tempos), TEC (Tempo de Enchimento Capilar, ex: TEC <3s ou TEC 3s), DVA (Droga Vasoativa: Noradrenalina, Vasopressina), AVP (Acesso Venoso Periférico), CVC VFD (Cateter Venoso Central em Veia Femoral Direita/Subclávia/Jugular).
+- Neurológico: PIFR / PIRF (Pupilas Isocóricas Fotorreagentes), RASS (Richmond Agitation-Sedation Scale), ECG (QUANDO SEGUIDO DE NÚMERO = ESCALA DE COMA DE GLASGOW, ex: "ECG 15", "ECG 3", "ECG 6"; NUNCA CONFUNDA COM ELETROCARDIOGRAMA QUANDO FOR NOTA DE GLASGOW), NIHSS.
+- Abdominal e Metabólico: RHA+ (Ruídos Hidroéreos Presentes), IP (Irritação Peritoneal), VMG (Visceromegalia), SNE (Sonda Nasoenteral), SVD (Sonda Vesical de Demora), GTT (Gastrostomia), HGT (Glicemia Capilar), HGA/HGV (Hemogasometria Arterial / Venosa).
+- Geral: BEG / REG / MEG (Bom / Regular / Mau Estado Geral), LOTE (Lúcido, Orientado em Tempo e Espaço), MUC (Medicações de Uso Contínuo), AM (Antecedentes Médicos), ATB (Antibióticos), DI (Data de Início), DF (Data de Fim), DHE (Distúrbio Hidroeletrolítico), LAMG (Lesão Aguda de Mucosa Gástrica), TEV (Tromboembolismo Venoso), SD (Serviço Diurno), SN (Serviço Noturno), SIC (Segundo Informações Coletadas).
+`;

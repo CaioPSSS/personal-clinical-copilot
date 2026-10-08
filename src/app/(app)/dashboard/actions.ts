@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { RecordMode } from '@/lib/types';
 
 export async function createPatient(formData: FormData) {
   const supabase = await createClient();
@@ -11,11 +12,16 @@ export async function createPatient(formData: FormData) {
 
   if (!user) return { error: 'Não autenticado.' };
 
+  const recordMode = (formData.get('record_mode') as RecordMode) || 'enfermaria';
+  const admissionDate = (formData.get('admission_date') as string) || null;
+
   const { error } = await supabase.from('patients').insert({
     user_id: user.id,
     full_name: formData.get('full_name') as string,
     institution: (formData.get('institution') as string) || null,
     status: (formData.get('status') as string) || 'estavel',
+    record_mode: recordMode,
+    admission_date: admissionDate,
     date_of_birth: (formData.get('date_of_birth') as string) || null,
     gender: (formData.get('gender') as string) || null,
     contact_phone: (formData.get('contact_phone') as string) || null,
@@ -38,20 +44,28 @@ export async function updatePatient(patientId: string, formData: FormData) {
 
   if (!user) return { error: 'Não autenticado.' };
 
+  const recordMode = formData.get('record_mode') as RecordMode | null;
+  const admissionDate = formData.get('admission_date') as string | null;
+
+  const updateData: Record<string, any> = {
+    full_name: formData.get('full_name') as string,
+    institution: (formData.get('institution') as string) || null,
+    status: (formData.get('status') as string) || 'estavel',
+    date_of_birth: (formData.get('date_of_birth') as string) || null,
+    gender: (formData.get('gender') as string) || null,
+    contact_phone: (formData.get('contact_phone') as string) || null,
+    notes: (formData.get('notes') as string) || null,
+    bed_number: (formData.get('bed_number') as string) || null,
+    room_number: (formData.get('room_number') as string) || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (recordMode) updateData.record_mode = recordMode;
+  if (admissionDate !== undefined) updateData.admission_date = admissionDate || null;
+
   const { error } = await supabase
     .from('patients')
-    .update({
-      full_name: formData.get('full_name') as string,
-      institution: (formData.get('institution') as string) || null,
-      status: (formData.get('status') as string) || 'estavel',
-      date_of_birth: (formData.get('date_of_birth') as string) || null,
-      gender: (formData.get('gender') as string) || null,
-      contact_phone: (formData.get('contact_phone') as string) || null,
-      notes: (formData.get('notes') as string) || null,
-      bed_number: (formData.get('bed_number') as string) || null,
-      room_number: (formData.get('room_number') as string) || null,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', patientId)
     .eq('user_id', user.id);
 

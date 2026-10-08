@@ -1,15 +1,9 @@
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { streamText } from 'ai';
 import { createClient } from '@/lib/supabase/server';
 import { EVIDENCE_NOTE_SYSTEM_PROMPT } from '@/lib/prompts/evidence-note';
-import { withFallback } from '@/lib/ai/model-fallback';
-import { getDynamicConductModels } from '@/lib/ai/dynamic-models';
+import { openrouter, AI_MODELS, getModelChain } from '@/lib/ai/models-config';
 
 export const maxDuration = 300;
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
 
 export async function POST(req: Request) {
   try {
@@ -27,7 +21,7 @@ export async function POST(req: Request) {
     // Buscar as informações atuais do prontuário
     const { data: currentRecord } = await supabase
       .from('medical_records')
-      .select('record_data')
+      .select('record_data, record_text, record_mode')
       .eq('patient_id', patientId)
       .eq('user_id', user.id)
       .order('version', { ascending: false })
@@ -41,35 +35,16 @@ export async function POST(req: Request) {
     }
 
     let recordText = '';
-    if (currentRecord?.record_data) {
+    if (currentRecord?.record_text) {
+      recordText = currentRecord.record_text;
+    } else if (currentRecord?.record_data) {
       const data = currentRecord.record_data as Record<string, string>;
-      const labelMap: Record<string, string> = {
-        identificacao: 'Identificação',
-        queixa_principal: 'Queixa Principal',
-        historia_doenca_atual: 'História da Moléstia Atual',
-        antecedentes_pessoais: 'Antecedentes Pessoais',
-        alergias: 'Alergias',
-        medicacoes_uso_continuo: 'Medicação de Uso Contínuo',
-        antecedentes_familiares: 'Antecedentes Familiares',
-        habitos_de_vida: 'Hábitos de Vida',
-        exame_fisico: 'Exame Físico',
-        evolucao_do_dia: 'Evolução do Dia',
-        exames_laboratoriais: 'Exames Laboratoriais',
-        exames_imagem: 'Exames de Imagem',
-        condutas: 'Condutas Feitas/Planejadas',
-      };
-
-      recordText = Object.entries(data)
-        .filter(([, v]) => v && v !== 'Não informado')
-        .map(([k, v]) => `## ${labelMap[k] || k}\n${v}`)
-        .join('\n\n');
+      const { formatRecordDataToText } = await import('@/lib/record-parser');
+      recordText = formatRecordDataToText(data, currentRecord.record_mode || 'enfermaria');
     }
 
-    // Obter dinamicamente os modelos ordenados por preço atual da OpenRouter
-    const dynamicModels = await getDynamicConductModels();
-
     const result = streamText({
-      model: withFallback(...dynamicModels),
+      model: getModelChain(AI_MODELS.CONDUCT),
       system: EVIDENCE_NOTE_SYSTEM_PROMPT,
       prompt: `Analise o seguinte caso clínico e gere a conduta baseada em evidências:\n\n${recordText}`,
       tools: {

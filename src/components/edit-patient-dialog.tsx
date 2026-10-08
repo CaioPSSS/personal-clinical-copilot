@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Building2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { updatePatient } from '@/app/(app)/dashboard/actions';
-import { Patient } from '@/lib/types';
+import { Patient, RecordMode } from '@/lib/types';
 
 interface EditPatientDialogProps {
   patient: Patient;
@@ -34,11 +34,13 @@ export function EditPatientDialog({
   existingInstitutions = [],
 }: EditPatientDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [recordMode, setRecordMode] = useState<RecordMode>(patient.record_mode || 'enfermaria');
   const [selectedInst, setSelectedInst] = useState<string>(patient.institution || '');
   const [customInst, setCustomInst] = useState<string>('');
   const [isAddingCustom, setIsAddingCustom] = useState<boolean>(false);
 
   useEffect(() => {
+    setRecordMode(patient.record_mode || 'enfermaria');
     setSelectedInst(patient.institution || '');
     setIsAddingCustom(false);
     setCustomInst('');
@@ -144,6 +146,50 @@ export function EditPatientDialog({
             )}
           </div>
 
+          {/* Seletor de Modo Clínico */}
+          <div className="space-y-2">
+            <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
+              Modo de Prontuário *
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <label
+                className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                  recordMode === 'enfermaria'
+                    ? 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold shadow-sm'
+                    : 'border-border hover:bg-muted/50 text-muted-foreground'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="record_mode"
+                  value="enfermaria"
+                  checked={recordMode === 'enfermaria'}
+                  onChange={() => setRecordMode('enfermaria')}
+                  className="sr-only"
+                />
+                🏥 Modo Enfermaria
+              </label>
+
+              <label
+                className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                  recordMode === 'emergencia_uti'
+                    ? 'border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 font-semibold shadow-sm'
+                    : 'border-border hover:bg-muted/50 text-muted-foreground'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="record_mode"
+                  value="emergencia_uti"
+                  checked={recordMode === 'emergencia_uti'}
+                  onChange={() => setRecordMode('emergencia_uti')}
+                  className="sr-only"
+                />
+                🚨 Emergência / UTI
+              </label>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="edit_status">Status / Triagem</Label>
@@ -174,6 +220,20 @@ export function EditPatientDialog({
                 <option value="Não informado">Não informado</option>
               </select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit_admission_date">Data/Hora de Admissão</Label>
+            <Input
+              id="edit_admission_date"
+              name="admission_date"
+              type="datetime-local"
+              defaultValue={
+                patient.admission_date
+                  ? new Date(patient.admission_date).toISOString().slice(0, 16)
+                  : ''
+              }
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -1,15 +1,10 @@
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { streamText } from 'ai';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { buildChatSystemPrompt } from '@/lib/prompts/chat';
-import { withFallback } from '@/lib/ai/model-fallback';
+import { openrouter, AI_MODELS, getModelChain } from '@/lib/ai/models-config';
 
 export const maxDuration = 300;
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
 
 export async function POST(req: Request) {
   try {
@@ -28,7 +23,7 @@ export async function POST(req: Request) {
     const [recordRes, evidenceRes] = await Promise.all([
       supabase
         .from('medical_records')
-        .select('record_data')
+        .select('record_data, record_text, record_mode')
         .eq('patient_id', patientId)
         .eq('user_id', user.id)
         .order('version', { ascending: false })
@@ -45,28 +40,12 @@ export async function POST(req: Request) {
     ]);
 
     let recordText = '';
-    if (recordRes.data?.record_data) {
+    if (recordRes.data?.record_text) {
+      recordText = recordRes.data.record_text;
+    } else if (recordRes.data?.record_data) {
       const data = recordRes.data.record_data as Record<string, string>;
-      const labelMap: Record<string, string> = {
-        identificacao: 'Identificação',
-        queixa_principal: 'Queixa Principal',
-        historia_doenca_atual: 'História da Moléstia Atual',
-        antecedentes_pessoais: 'Antecedentes Pessoais',
-        alergias: 'Alergias',
-        medicacoes_uso_continuo: 'Medicação de Uso Contínuo',
-        antecedentes_familiares: 'Antecedentes Familiares',
-        habitos_de_vida: 'Hábitos de Vida',
-        exame_fisico: 'Exame Físico',
-        evolucao_do_dia: 'Evolução do Dia',
-        exames_laboratoriais: 'Exames Laboratoriais',
-        exames_imagem: 'Exames de Imagem',
-        condutas: 'Condutas Feitas/Planejadas',
-      };
-
-      recordText = Object.entries(data)
-        .filter(([, v]) => v && v !== 'Não informado')
-        .map(([k, v]) => `## ${labelMap[k] || k}\n${v}`)
-        .join('\n\n');
+      const { formatRecordDataToText } = await import('@/lib/record-parser');
+      recordText = formatRecordDataToText(data, recordRes.data.record_mode || 'enfermaria');
     }
 
     const systemPrompt = buildChatSystemPrompt(
@@ -90,15 +69,7 @@ export async function POST(req: Request) {
     });
 
     const result = streamText({
-      model: withFallback(
-        openrouter.chat('google/gemma-4-31b-it:free'),
-        openrouter.chat('google/gemma-4-31b-it'),
-        openrouter.chat('qwen/qwen3.6-35b-a3b'),
-        openrouter.chat('google/gemma-4-26b-a4b-it'),
-        openrouter.chat('google/gemma-3-27b-it'),
-        openrouter.chat('meta-llama/llama-3.3-70b-instruct'),
-        openrouter.chat('deepseek/deepseek-chat')
-      ),
+      model: getModelChain(AI_MODELS.CHAT),
       system: systemPrompt,
       messages: coreMessages,
       tools: {

@@ -1,11 +1,23 @@
 export type PatientStatus = 'estavel' | 'atencao' | 'critico' | 'alta';
 
+export type RecordMode = 'enfermaria' | 'emergencia_uti';
+
+export type SourceDocumentType =
+  | 'auto'
+  | 'evolucao_anterior'
+  | 'internamento_previo'
+  | 'laboratorio'
+  | 'imagem_laudo'
+  | 'prescricao'
+  | 'outro';
+
 export interface Patient {
   id: string;
   user_id: string;
   full_name: string;
   institution: string | null;
   status: PatientStatus | null;
+  record_mode?: RecordMode | null;
   date_of_birth: string | null;
   gender: string | null;
   contact_phone: string | null;
@@ -22,6 +34,8 @@ export interface MedicalRecord {
   user_id: string;
   patient_id: string;
   record_data: MedicalRecordData;
+  record_text?: string | null;
+  record_mode?: RecordMode | null;
   version: number;
   created_at: string;
   updated_at: string;
@@ -81,6 +95,11 @@ export interface FileRecord {
   file_size: number | null;
   storage_path: string;
   category: 'audio' | 'image' | 'document';
+  source_type?: SourceDocumentType | null;
+  extracted_text?: string | null;
+  document_date?: string | null;
+  detected_patient_name?: string | null;
+  extraction_status?: 'pending' | 'processing' | 'done' | 'error' | null;
   processed?: boolean;
   created_at: string;
 }

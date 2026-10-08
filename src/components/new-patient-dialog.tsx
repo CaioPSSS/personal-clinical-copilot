@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Loader2, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPatient } from '@/app/(app)/dashboard/actions';
+import { RecordMode } from '@/lib/types';
 
 interface NewPatientDialogProps {
   onCreated: () => void;
@@ -26,6 +27,7 @@ interface NewPatientDialogProps {
 export function NewPatientDialog({ onCreated, existingInstitutions = [] }: NewPatientDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [recordMode, setRecordMode] = useState<RecordMode>('enfermaria');
   const [selectedInst, setSelectedInst] = useState<string>('');
   const [customInst, setCustomInst] = useState<string>('');
   const [isAddingCustom, setIsAddingCustom] = useState<boolean>(false);
@@ -127,13 +129,62 @@ export function NewPatientDialog({ onCreated, existingInstitutions = [] }: NewPa
             )}
           </div>
 
+          {/* Seletor de Modo Clínico */}
+          <div className="space-y-2">
+            <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
+              Modo de Prontuário *
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <label
+                className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                  recordMode === 'enfermaria'
+                    ? 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold shadow-sm'
+                    : 'border-border hover:bg-muted/50 text-muted-foreground'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="record_mode"
+                  value="enfermaria"
+                  checked={recordMode === 'enfermaria'}
+                  onChange={() => setRecordMode('enfermaria')}
+                  className="sr-only"
+                />
+                🏥 Modo Enfermaria
+              </label>
+
+              <label
+                className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                  recordMode === 'emergencia_uti'
+                    ? 'border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 font-semibold shadow-sm'
+                    : 'border-border hover:bg-muted/50 text-muted-foreground'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="record_mode"
+                  value="emergencia_uti"
+                  checked={recordMode === 'emergencia_uti'}
+                  onChange={() => setRecordMode('emergencia_uti')}
+                  className="sr-only"
+                />
+                🚨 Emergência / UTI
+              </label>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              {recordMode === 'emergencia_uti'
+                ? 'Emite texto em MAIÚSCULAS, avaliação ABCDE, lista de problemas e condutas por vigilâncias.'
+                : 'Emite texto em prosa corrida, sinais vitais consolidados, HGT diário e exame por aparelhos.'}
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="status">Status / Triagem</Label>
               <select
                 id="status"
                 name="status"
-                defaultValue="estavel"
+                defaultValue={recordMode === 'emergencia_uti' ? 'critico' : 'estavel'}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <option value="estavel">🟢 Estável</option>
@@ -156,6 +207,16 @@ export function NewPatientDialog({ onCreated, existingInstitutions = [] }: NewPa
                 <option value="Não informado">Não informado</option>
               </select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="admission_date">Data/Hora de Admissão</Label>
+            <Input
+              id="admission_date"
+              name="admission_date"
+              type="datetime-local"
+              defaultValue={new Date().toISOString().slice(0, 16)}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

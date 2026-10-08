@@ -206,6 +206,7 @@ export function PatientWorkspace({
 
         <TabsContent value="auto-note" keepMounted>
           <StepAutoNote
+            patient={patient}
             patientId={patient.id}
             medicalRecord={medicalRecord}
             transcriptions={transcriptions}

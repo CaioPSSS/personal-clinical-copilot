@@ -1,18 +1,37 @@
+import { EMERGENCY_SECTIONS, WARD_SECTIONS } from './record-templates';
+
 export const SECTION_LABELS: Record<string, string> = {
+  dados_admissao: 'Dados de Admissão',
   identificacao: 'Identificação',
+  lista_problemas: 'Lista de Problemas',
   queixa_principal: 'Queixa Principal',
   historia_doenca_atual: 'História da Moléstia Atual',
+  hma: 'História da Moléstia Atual (HMA)',
+  admissao_sala_vermelha: 'Admissão Sala Vermelha',
   revisao_de_sistemas: 'Revisão de Sistemas',
   antecedentes_pessoais: 'Antecedentes Pessoais',
+  antecedentes_obstetricos: 'Antecedentes Obstétricos',
+  am: 'Antecedentes Médicos (AM)',
   alergias: 'Alergias',
   medicacoes_em_uso: 'Medicações em Uso',
   medicacoes_uso_continuo: 'Medicação de Uso Contínuo',
+  muc: 'Medicação de Uso Contínuo (MUC)',
   antecedentes_familiares: 'Antecedentes Familiares',
   habitos_de_vida: 'Hábitos de Vida',
+  psicossocial: 'Psicossocial',
+  sinais_vitais: 'Sinais Vitais',
   exame_fisico: 'Exame Físico',
+  exame_fisico_admissional: 'Exame Físico Admissional',
   evolucao_do_dia: 'Evolução do Dia',
+  atb: 'Antibioticoterapia (ATB)',
+  dispositivos: 'Dispositivos em Uso',
+  dispositivos_antimicrobianos: 'Dispositivos e Antimicrobianos',
+  exames_complementares: 'Exames Complementares',
   exames_laboratoriais: 'Exames Laboratoriais',
   exames_imagem: 'Exames de Imagem',
   hipoteses_diagnosticas: 'Hipóteses Diagnósticas',
-  condutas: 'Condutas Feitas/Planejadas',
+  condutas: 'Condutas / Plano Terapêutico',
+  plano_terapeutico: 'Plano Terapêutico',
 };
+
+export { EMERGENCY_SECTIONS, WARD_SECTIONS };

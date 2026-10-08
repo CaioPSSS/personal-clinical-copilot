@@ -1,15 +1,11 @@
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
+import { openrouter, createClinicalModel } from './models-config';
 
 // Preços padrão por 1M de tokens (prompt + completion) como fallback offline
 const DEFAULT_PRICES: Record<string, number> = {
-  'openai/gpt-5.6-luna': 0.70,
-  'minimax/minimax-m3': 1.20,
-  'deepseek/deepseek-v4-pro': 1.305,
-  'deepseek/deepseek-v4-flash': 0.27,
+  'openai/gpt-6-luna': 0.35,
+  'xiaomi/mimo-v2.6-pro': 1.30,
+  'deepseek/deepseek-v4.1-flash': 0.27,
+  'anthropic/claude-haiku-5.5': 0.35,
 };
 
 let cachedPrices: { data: Record<string, number>; timestamp: number } | null = null;
@@ -57,32 +53,32 @@ async function getOpenRouterPrices(): Promise<Record<string, number>> {
 export async function getDynamicConductModels(): Promise<any[]> {
   const prices = await getOpenRouterPrices();
 
-  const lunaId = 'openai/gpt-5.6-luna';
-  const minimaxId = 'minimax/minimax-m3';
-  const proId = 'deepseek/deepseek-v4-pro';
-  const flashId = 'deepseek/deepseek-v4-flash';
+  const lunaId = 'openai/gpt-6-luna';
+  const mimoId = 'xiaomi/mimo-v2.6-pro';
+  const haikuId = 'anthropic/claude-haiku-5.5';
+  const flashId = 'deepseek/deepseek-v4.1-flash';
 
   const getPrice = (id: string) => prices[id] ?? DEFAULT_PRICES[id] ?? 999;
 
-  // 1. Ordenar o grupo principal (Luna, MiniMax, DeepSeek Pro) pelo menor preço
-  const mainGroup = [lunaId, minimaxId, proId].sort(
+  // 1. Ordenar o grupo principal pelo menor preço
+  const mainGroup = [lunaId, haikuId, mimoId].sort(
     (a, b) => getPrice(a) - getPrice(b)
   );
 
-  const proPrice = getPrice(proId);
+  const mimoPrice = getPrice(mimoId);
   const resultModelIds: string[] = [];
   let flashInserted = false;
 
-  // 2. Inserir Flash imediatamente antes de qualquer modelo mais caro que o DeepSeek V4 Pro
+  // 2. Inserir Flash imediatamente antes de qualquer modelo mais caro que o MiMo Pro
   for (const modelId of mainGroup) {
-    if (!flashInserted && getPrice(modelId) > proPrice) {
+    if (!flashInserted && getPrice(modelId) > mimoPrice) {
       resultModelIds.push(flashId);
       flashInserted = true;
     }
     resultModelIds.push(modelId);
   }
 
-  // Se nenhum modelo for mais caro que o Pro, o Flash entra no final
+  // Se nenhum modelo for mais caro que o MiMo Pro, o Flash entra no final
   if (!flashInserted) {
     resultModelIds.push(flashId);
   }
@@ -92,5 +88,5 @@ export async function getDynamicConductModels(): Promise<any[]> {
     resultModelIds.map((id) => `${id} ($${getPrice(id).toFixed(2)}/M)`).join(' -> ')
   );
 
-  return resultModelIds.map((id) => openrouter.chat(id));
+  return resultModelIds.map((id) => createClinicalModel(id));
 }

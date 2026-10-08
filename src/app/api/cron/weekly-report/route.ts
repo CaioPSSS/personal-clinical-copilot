@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { generateText } from 'ai';
-import { withFallback } from '@/lib/ai/model-fallback';
 import { formatRecordDataToText } from '@/lib/record-parser';
 import {
   WEEKLY_REPORT_SYSTEM_PROMPT,
   buildWeeklyReportPrompt,
 } from '@/lib/prompts/weekly-report';
+import { AI_MODELS, getModelChain } from '@/lib/ai/models-config';
 
 export const maxDuration = 300;
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
 
 export async function POST(req: NextRequest) {
   try {
@@ -122,16 +117,11 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    // 4. Executar geração via DeepSeek (sem Web Search)
+    // 4. Executar geração via modelo configurado (sem Web Search)
     const prompt = buildWeeklyReportPrompt(casesData);
 
-    const model = withFallback(
-      openrouter.chat('deepseek/deepseek-v4-pro'),
-      openrouter.chat('google/gemma-4-31b-it')
-    );
-
     const result = await generateText({
-      model,
+      model: getModelChain(AI_MODELS.WEEKLY_REPORT),
       system: WEEKLY_REPORT_SYSTEM_PROMPT,
       prompt,
       maxOutputTokens: 16000,

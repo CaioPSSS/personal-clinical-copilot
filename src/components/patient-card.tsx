@@ -59,6 +59,15 @@ export function PatientCard({ patient, onDelete, existingInstitutions = [] }: Pa
                       {patient.gender}
                     </Badge>
                   )}
+                  {patient.record_mode === 'emergencia_uti' ? (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-red-500/40 text-red-600 bg-red-500/5">
+                      🚨 Emergência/UTI
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/40 text-blue-600 bg-blue-500/5">
+                      🏥 Enfermaria
+                    </Badge>
+                  )}
                   {patient.status === 'critico' && (
                     <Badge variant="destructive" className="text-[10px] px-1.5 py-0 bg-red-600">
                       🔴 Crítico / UTI

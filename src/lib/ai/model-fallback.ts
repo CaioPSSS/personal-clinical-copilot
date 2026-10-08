@@ -26,7 +26,8 @@ export function withFallback(...args: any[]): any {
           return res;
         } catch (err) {
           lastError = err;
-          console.warn(`[AI Fallback] Modelo ${i} falhou em doGenerate:`, err);
+          const modelName = models[i]?.modelId || `Modelo ${i}`;
+          console.warn(`[AI Fallback] ${modelName} falhou em doGenerate:`, err);
         }
       }
       throw lastError;
@@ -39,7 +40,8 @@ export function withFallback(...args: any[]): any {
           return await models[i].doStream(options);
         } catch (err) {
           lastError = err;
-          console.warn(`[AI Fallback] Modelo ${i} falhou em doStream:`, err);
+          const modelName = models[i]?.modelId || `Modelo ${i}`;
+          console.warn(`[AI Fallback] ${modelName} falhou em doStream:`, err);
         }
       }
       throw lastError;

@@ -101,32 +101,45 @@ export function RoundModal({
 
         {/* Limpo, tipografia médica ampliada para leitura confortável no Round */}
         <ScrollArea className="flex-1 pr-4 py-4">
-          {!record || !record.record_data ? (
+          {!record || (!record.record_text && !record.record_data) ? (
             <div className="text-center py-20 text-muted-foreground">
               Nenhum prontuário registrado para este paciente ainda.
             </div>
           ) : (
             <div className="space-y-6 max-w-4xl mx-auto py-2">
               <div className="bg-muted/30 p-4 rounded-xl border flex items-center justify-between text-xs text-muted-foreground">
-                <span>Versão do Prontuário: v{record.version}</span>
+                <div className="flex items-center gap-2">
+                  <span>Versão: v{record.version}</span>
+                  <Badge variant="outline" className="text-[10px]">
+                    {record.record_mode === 'emergencia_uti' ? '🚨 Emergência / UTI' : '🏥 Enfermaria'}
+                  </Badge>
+                </div>
                 <span>Última Atualização: {formatDate(record.updated_at)}</span>
               </div>
 
-              {Object.entries(record.record_data)
-                .filter(([, val]) => val && val !== 'Não informado' && val !== 'Não avaliado')
-                .map(([key, val]) => (
-                  <div key={key} className="space-y-2 border-b pb-4 last:border-b-0">
-                    <h3 className="text-base font-bold text-primary capitalize flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-primary inline-block" />
-                      {key.replace(/_/g, ' ')}
-                    </h3>
-                    <div className="prose-medical text-base text-foreground leading-relaxed pl-4">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {val}
-                      </ReactMarkdown>
+              {record.record_text ? (
+                <div className="bg-card p-6 rounded-xl border shadow-sm">
+                  <pre className="font-mono text-sm leading-relaxed text-foreground whitespace-pre-wrap selection:bg-primary/20">
+                    {record.record_text}
+                  </pre>
+                </div>
+              ) : (
+                Object.entries(record.record_data || {})
+                  .filter(([, val]) => val && val !== 'Não informado' && val !== 'Não avaliado' && val !== 'N/A')
+                  .map(([key, val]) => (
+                    <div key={key} className="space-y-2 border-b pb-4 last:border-b-0">
+                      <h3 className="text-base font-bold text-primary capitalize flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-primary inline-block" />
+                        {key.replace(/_/g, ' ')}
+                      </h3>
+                      <div className="prose-medical text-base text-foreground leading-relaxed pl-4">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {val}
+                        </ReactMarkdown>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+              )}
             </div>
           )}
         </ScrollArea>

@@ -25,10 +25,20 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Transcription, FileRecord } from '@/lib/types';
+import { Transcription, FileRecord, SourceDocumentType } from '@/lib/types';
 import { formatRelativeTime } from '@/lib/helpers';
 import { createClient } from '@/lib/supabase/client';
 import { compressAudioToMp3 } from '@/lib/audio-compressor';
+
+const SOURCE_TYPE_OPTIONS: { value: SourceDocumentType; label: string }[] = [
+  { value: 'auto', label: 'Detectar Automático' },
+  { value: 'evolucao_anterior', label: '📋 Evolução de Ontem / Plantão Anterior' },
+  { value: 'internamento_previo', label: '🗂️ Outro Internamento Antigo' },
+  { value: 'laboratorio', label: '🧪 Exames / Gasometria' },
+  { value: 'imagem_laudo', label: '🩻 Laudo de Imagem / ECG' },
+  { value: 'prescricao', label: '💊 Prescrição / Controles' },
+  { value: 'outro', label: '📎 Outro' },
+];
 
 interface StepUploadProps {
   patientId: string;
@@ -47,6 +57,8 @@ export function StepUpload({
   const [uploading, setUploading] = useState(false);
   const [transcribing, setTranscribing] = useState<string | null>(null);
   const [compressing, setCompressing] = useState<string | null>(null);
+  const [analyzingImageId, setAnalyzingImageId] = useState<string | null>(null);
+  const [expandedFileId, setExpandedFileId] = useState<string | null>(null);
   const [manualText, setManualText] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -186,6 +198,43 @@ export function StepUpload({
     }
   }
 
+  async function handleSourceTypeChange(fileId: string, sourceType: SourceDocumentType) {
+    try {
+      const res = await fetch('/api/update-file', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileId, sourceType }),
+      });
+      if (res.ok) {
+        toast.success('Classificação do documento atualizada!');
+        onDataChange();
+      } else {
+        toast.error('Falha ao atualizar classificação.');
+      }
+    } catch {
+      toast.error('Erro de conexão ao atualizar documento.');
+    }
+  }
+
+  async function extractImageText(fileId: string, storagePath: string) {
+    setAnalyzingImageId(fileId);
+    try {
+      const res = await fetch('/api/analyze-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileId, storagePath }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Falha na leitura da imagem.');
+      toast.success('Conteúdo da imagem lido e extraído com sucesso!');
+      onDataChange();
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao analisar imagem.');
+    } finally {
+      setAnalyzingImageId(null);
+    }
+  }
+
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const fileList = e.target.files;
     if (!fileList?.length) return;
@@ -194,8 +243,13 @@ export function StepUpload({
     try {
       for (const file of Array.from(fileList)) {
         try {
-          await uploadFile(file, 'image');
+          const uploadRes = await uploadFile(file, 'image');
           toast.success(`"${file.name}" enviado com sucesso!`);
+
+          // Disparar leitura/transcrição da imagem em segundo plano
+          if (uploadRes?.file?.id && uploadRes?.storagePath) {
+            extractImageText(uploadRes.file.id, uploadRes.storagePath);
+          }
         } catch (err: any) {
           const errMsg = err?.message || 'Erro no upload da imagem.';
           toast.error(`"${file.name}": ${errMsg}`);
@@ -524,26 +578,108 @@ export function StepUpload({
           </CardHeader>
           <CardContent className="py-0 pb-4">
             <div className="space-y-2">
-              {files.map((f) => (
-                <div key={f.id} className="flex items-center justify-between p-3 rounded-lg border bg-card text-sm group">
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    {f.file_type.startsWith('image') ? (
-                      <ImageIcon className="w-4 h-4 text-primary shrink-0" />
-                    ) : (
-                      <FileAudio className="w-4 h-4 text-primary shrink-0" />
+              {files.map((f) => {
+                const isImage = f.file_type.startsWith('image');
+                const isAnalyzing = analyzingImageId === f.id;
+                const isExpanded = expandedFileId === f.id;
+
+                return (
+                  <div key={f.id} className="flex flex-col p-3 rounded-lg border bg-card text-sm group gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        {isImage ? (
+                          <ImageIcon className="w-4 h-4 text-primary shrink-0" />
+                        ) : (
+                          <FileAudio className="w-4 h-4 text-primary shrink-0" />
+                        )}
+                        <span className="truncate font-medium">{f.file_name}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {isImage && (
+                          <select
+                            value={f.source_type || 'auto'}
+                            onChange={(e) => handleSourceTypeChange(f.id, e.target.value as SourceDocumentType)}
+                            className="h-7 text-xs rounded-md border border-input bg-background px-2 py-0 shadow-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                          >
+                            {SOURCE_TYPE_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        <Badge variant={f.processed ? 'secondary' : 'default'} className="text-[10px]">
+                          {f.processed ? 'Incluído' : 'Pendente'}
+                        </Badge>
+
+                        {isImage && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-primary px-2"
+                            onClick={() => {
+                              if (!f.extracted_text && !isAnalyzing) {
+                                extractImageText(f.id, f.storage_path);
+                              } else {
+                                setExpandedFileId(isExpanded ? null : f.id);
+                              }
+                            }}
+                            disabled={isAnalyzing}
+                          >
+                            {isAnalyzing ? (
+                              <>
+                                <Loader2 className="w-3 h-3 animate-spin mr-1" /> Lendo...
+                              </>
+                            ) : f.extracted_text ? (
+                              isExpanded ? 'Ocultar Leitura' : 'Ver Leitura da IA'
+                            ) : (
+                              'Ler Imagem'
+                            )}
+                          </Button>
+                        )}
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => deleteFile(f.id, f.storage_path, !!f.processed)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Pré-visualização e edição do texto extraído da imagem */}
+                    {isExpanded && f.extracted_text && (
+                      <div className="mt-2 p-3 bg-muted/40 rounded-md border border-border/60 space-y-2">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span className="font-semibold text-primary">Texto Extraído da Imagem pela IA:</span>
+                          <span className="text-[11px]">Você pode conferir ou ajustar antes da geração</span>
+                        </div>
+                        <Textarea
+                          defaultValue={f.extracted_text}
+                          rows={4}
+                          className="text-xs font-mono bg-background resize-y"
+                          onBlur={async (e) => {
+                            const newText = e.target.value;
+                            if (newText !== f.extracted_text) {
+                              await fetch('/api/update-file', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ fileId: f.id, extractedText: newText }),
+                              });
+                              toast.success('Texto da imagem atualizado!');
+                              onDataChange();
+                            }
+                          }}
+                        />
+                      </div>
                     )}
-                    <span className="truncate">{f.file_name}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant={f.processed ? 'secondary' : 'default'} className="text-[10px]">
-                      {f.processed ? 'Incluído' : 'Pendente'}
-                    </Badge>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteFile(f.id, f.storage_path, !!f.processed)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               {transcriptions.map((t) => (
                 <div key={t.id} className="flex flex-col p-3 rounded-lg border bg-card text-sm group gap-2">
