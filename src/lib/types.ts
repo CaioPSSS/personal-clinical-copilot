@@ -1,6 +1,6 @@
 export type PatientStatus = 'estavel' | 'atencao' | 'critico' | 'alta';
 
-export type RecordMode = 'enfermaria' | 'emergencia_uti';
+export type RecordMode = 'enfermaria' | 'emergencia_uti' | 'ambulatorio';
 
 export type SourceDocumentType =
   | 'auto'
@@ -18,6 +18,7 @@ export interface Patient {
   institution: string | null;
   status: PatientStatus | null;
   record_mode?: RecordMode | null;
+  specialty?: string | null;
   date_of_birth: string | null;
   gender: string | null;
   contact_phone: string | null;
@@ -36,6 +37,7 @@ export interface MedicalRecord {
   record_data: MedicalRecordData;
   record_text?: string | null;
   record_mode?: RecordMode | null;
+  specialty?: string | null;
   version: number;
   created_at: string;
   updated_at: string;

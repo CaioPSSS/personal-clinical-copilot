@@ -63,6 +63,10 @@ export function PatientCard({ patient, onDelete, existingInstitutions = [] }: Pa
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-red-500/40 text-red-600 bg-red-500/5">
                       🚨 Emergência/UTI
                     </Badge>
+                  ) : patient.record_mode === 'ambulatorio' ? (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5">
+                      🩺 Ambulatório {patient.specialty ? `• ${patient.specialty}` : ''}
+                    </Badge>
                   ) : (
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/40 text-blue-600 bg-blue-500/5">
                       🏥 Enfermaria

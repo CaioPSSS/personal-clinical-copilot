@@ -61,7 +61,33 @@ export async function POST(req: Request) {
     }
 
     const patient = patientData as Patient;
+    const requestedSpecialty = body.specialty as string | undefined;
+    if (requestedSpecialty) {
+      patient.specialty = requestedSpecialty.trim();
+    }
     const mode: RecordMode = requestedMode || patient.record_mode || 'enfermaria';
+    if (mode === 'ambulatorio' && !patient.specialty) {
+      patient.specialty = 'Clínica Médica Geral';
+    }
+
+    // Atualizar a especialidade ou modo no banco se tiver mudado
+    if (
+      (requestedSpecialty && requestedSpecialty !== patientData.specialty) ||
+      (requestedMode && requestedMode !== patientData.record_mode)
+    ) {
+      const updates: Record<string, any> = {};
+      if (requestedSpecialty) updates.specialty = requestedSpecialty.trim();
+      if (requestedMode) updates.record_mode = requestedMode;
+      try {
+        await supabase
+          .from('patients')
+          .update(updates)
+          .eq('id', patientId);
+      } catch {
+        // Ignora silenciosamente caso a coluna ainda não exista no Supabase
+      }
+    }
+
     const { todayStr, shift } = getBrasiliaDateAndShift();
 
     // 2. Buscar prontuário atual (se existir)

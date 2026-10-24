@@ -13,6 +13,7 @@ export async function createPatient(formData: FormData) {
   if (!user) return { error: 'Não autenticado.' };
 
   const recordMode = (formData.get('record_mode') as RecordMode) || 'enfermaria';
+  const specialty = (formData.get('specialty') as string) || null;
   const admissionDate = (formData.get('admission_date') as string) || null;
 
   const basePayload: Record<string, any> = {
@@ -31,6 +32,7 @@ export async function createPatient(formData: FormData) {
   let { error } = await supabase.from('patients').insert({
     ...basePayload,
     record_mode: recordMode,
+    specialty: specialty,
     admission_date: admissionDate,
   });
 
@@ -55,6 +57,7 @@ export async function updatePatient(patientId: string, formData: FormData) {
   if (!user) return { error: 'Não autenticado.' };
 
   const recordMode = formData.get('record_mode') as RecordMode | null;
+  const specialty = formData.get('specialty') as string | null;
   const admissionDate = formData.get('admission_date') as string | null;
 
   const updateData: Record<string, any> = {
@@ -71,6 +74,7 @@ export async function updatePatient(patientId: string, formData: FormData) {
   };
 
   if (recordMode) updateData.record_mode = recordMode;
+  if (specialty !== null) updateData.specialty = specialty || null;
   if (admissionDate !== undefined) updateData.admission_date = admissionDate || null;
 
   let { error } = await supabase
@@ -81,6 +85,7 @@ export async function updatePatient(patientId: string, formData: FormData) {
 
   if (error && error.message?.includes('schema cache')) {
     delete updateData.record_mode;
+    delete updateData.specialty;
     delete updateData.admission_date;
     const retry = await supabase
       .from('patients')

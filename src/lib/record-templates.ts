@@ -162,6 +162,61 @@ export const WARD_SECTIONS: SectionDefinition[] = [
   },
 ];
 
+export const OUTPATIENT_SECTIONS: SectionDefinition[] = [
+  {
+    key: 'identificacao',
+    title: 'ID',
+    aliases: ['id', 'identificacao', 'identificação', 'dados', 'dados cadastrais'],
+    requiredInMode: ['ambulatorio'],
+  },
+  {
+    key: 'hma',
+    title: 'HMA',
+    aliases: ['hma', 'historia da molestia atual', 'história da moléstia atual', 'historia da doenca atual', 'queixa e duracao', 'qp'],
+    requiredInMode: ['ambulatorio'],
+  },
+  {
+    key: 'am',
+    title: 'Antecedentes Médicos',
+    aliases: ['antecedentes medicos', 'antecedentes médicos', 'am', 'antecedentes pessoais', 'antecedentes patologicos', 'app'],
+    requiredInMode: ['ambulatorio'],
+  },
+  {
+    key: 'muc',
+    title: 'Medicações de Uso Atual',
+    aliases: ['medicacoes de uso atual', 'medicações de uso atual', 'medicacoes em uso', 'medicações em uso', 'muc', 'medicacoes de uso continuo', 'medicamentos em uso'],
+    requiredInMode: ['ambulatorio'],
+  },
+  {
+    key: 'is',
+    title: 'Interrogatório Sistemático',
+    aliases: ['interrogatorio sistematico', 'interrogatório sistemático', 'is', 'revisao de sistemas', 'revisão de sistemas'],
+    requiredInMode: ['ambulatorio'],
+  },
+  {
+    key: 'habitos_de_vida',
+    title: 'Hábitos de Vida',
+    aliases: ['habitos de vida', 'hábitos de vida', 'estilo de vida'],
+    requiredInMode: ['ambulatorio'],
+  },
+  {
+    key: 'hps',
+    title: 'HPS',
+    aliases: ['hps', 'historia psicossocial', 'história psicossocial', 'psicossocial', 'antecedentes sociofamiliares', 'antecedentes familiares', 'af'],
+    requiredInMode: ['ambulatorio'],
+  },
+  {
+    key: 'exame_fisico',
+    title: 'Exame Físico',
+    aliases: ['exame fisico', 'exame físico', 'ef'],
+  },
+  {
+    key: 'exames_complementares',
+    title: 'Exames Complementares',
+    aliases: ['exames complementares', 'exames laboratoriais', 'exames trazidos', 'exames'],
+  },
+];
+
 /**
  * Constrói o cabeçalho padronizado e determinístico de acordo com o modo clínico e cadastro do paciente.
  */
@@ -201,7 +256,6 @@ export function buildPatientHeader(
     return header;
   }
 
-  // Modo Enfermaria
   const genderCode = patient.gender
     ? patient.gender.toLowerCase().startsWith('m')
       ? 'M'
@@ -210,6 +264,19 @@ export function buildPatientHeader(
       : patient.gender
     : '';
 
+  if (mode === 'ambulatorio') {
+    const spec = patient.specialty?.trim()
+      ? `AMBULATÓRIO DE ${patient.specialty.trim().toUpperCase()}`
+      : 'AMBULATÓRIO GERAL';
+    const parts: string[] = [spec];
+    if (patient.institution) parts.push(patient.institution);
+    if (genderCode) parts.push(genderCode);
+    if (age !== null) parts.push(`${age} anos`);
+    if (options?.today) parts.push(`Consulta: ${options.today}`);
+    return `=== ${patient.full_name.toUpperCase()} | ${parts.join(' | ')} ===`;
+  }
+
+  // Modo Enfermaria
   const parts: string[] = [];
   if (genderCode) parts.push(genderCode);
   if (age !== null) parts.push(`${age} anos`);

@@ -48,12 +48,36 @@ export function StepAutoNote({
   const [activeMode, setActiveMode] = useState<RecordMode>(() => {
     return patient?.record_mode || medicalRecord?.record_mode || 'enfermaria';
   });
+  const [specialty, setSpecialty] = useState<string>(() => {
+    return patient?.specialty || 'Cardiologia';
+  });
+  const [isEditingSpecialty, setIsEditingSpecialty] = useState(false);
+  const [specialtyInput, setSpecialtyInput] = useState<string>(() => {
+    return patient?.specialty || 'Cardiologia';
+  });
+
+  const POPULAR_SPECIALTIES = [
+    'Cardiologia',
+    'Clínica Médica',
+    'Endocrinologia',
+    'Pneumologia',
+    'Gastroenterologia',
+    'Nefrologia',
+    'Reumatologia',
+    'Neurologia',
+    'Geriatria',
+    'Infectologia',
+  ];
 
   useEffect(() => {
     if (patient?.record_mode) {
       setActiveMode(patient.record_mode);
     }
-  }, [patient?.record_mode]);
+    if (patient?.specialty) {
+      setSpecialty(patient.specialty);
+      setSpecialtyInput(patient.specialty);
+    }
+  }, [patient?.record_mode, patient?.specialty]);
 
   const [generated, setGenerated] = useState(false);
   const [editedNote, setEditedNote] = useState<string>('');
@@ -74,10 +98,35 @@ export function StepAutoNote({
         .from('patients')
         .update({ record_mode: newMode })
         .eq('id', patientId);
-      toast.success(`Modo alterado para ${newMode === 'emergencia_uti' ? 'Emergência / UTI' : 'Enfermaria'}`);
+      const modeLabel =
+        newMode === 'emergencia_uti'
+          ? 'Emergência / UTI'
+          : newMode === 'ambulatorio'
+          ? `Modo Ambulatório (${specialty})`
+          : 'Enfermaria';
+      toast.success(`Modo alterado para ${modeLabel}`);
       onDataChange();
     } catch {
       // Ignorar erro silencioso de atualização cadastral
+    }
+  }
+
+  async function handleSpecialtySelect(newSpec: string) {
+    const trimmed = newSpec.trim();
+    if (!trimmed) return;
+    setSpecialty(trimmed);
+    setSpecialtyInput(trimmed);
+    setIsEditingSpecialty(false);
+    try {
+      const supabase = createClient();
+      await supabase
+        .from('patients')
+        .update({ specialty: trimmed })
+        .eq('id', patientId);
+      toast.success(`Especialidade do ambulatório: ${trimmed}`);
+      onDataChange();
+    } catch {
+      // Ignorar erro silencioso
     }
   }
 
@@ -93,6 +142,7 @@ export function StepAutoNote({
           patientId,
           text: editedNote,
           recordMode: activeMode,
+          specialty: activeMode === 'ambulatorio' ? specialty : undefined,
           hasTranscriptions: pendingTranscriptions.length > 0 || pendingFiles.length > 0,
           fileIds: pendingFileIds,
         }),
@@ -133,6 +183,7 @@ export function StepAutoNote({
           patientId,
           transcriptText: allPendingText,
           mode: targetMode,
+          specialty: targetMode === 'ambulatorio' ? specialty : undefined,
           fileIds: pendingFileIds.length > 0 ? pendingFileIds : undefined,
           imagePaths: pendingImagePaths.length > 0 ? pendingImagePaths : undefined,
         }),
@@ -201,7 +252,7 @@ export function StepAutoNote({
             </div>
 
             {/* Alternador de Modo de Prontuário */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground font-medium">Modo:</span>
               <div className="inline-flex rounded-lg border bg-muted/40 p-0.5">
                 <button
@@ -226,10 +277,21 @@ export function StepAutoNote({
                 >
                   🚨 Emergência / UTI
                 </button>
+                <button
+                  type="button"
+                  onClick={() => handleModeChange('ambulatorio')}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+                    activeMode === 'ambulatorio'
+                      ? 'bg-background text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  🩺 Ambulatório
+                </button>
               </div>
 
               {pendingTranscriptions.length > 0 && (
-                <Badge variant="secondary" className="text-[11px] ml-2">
+                <Badge variant="secondary" className="text-[11px] ml-1">
                   {pendingTranscriptions.length} áudio(s) pendente(s)
                 </Badge>
               )}
@@ -239,6 +301,96 @@ export function StepAutoNote({
                 </Badge>
               )}
             </div>
+
+            {/* Barra Especializada do Modo Ambulatório */}
+            {activeMode === 'ambulatorio' && (
+              <div className="pt-2 space-y-2 border-t mt-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                    Especialidade:
+                  </span>
+
+                  {!isEditingSpecialty ? (
+                    <div className="flex items-center gap-1.5">
+                      <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs">
+                        {specialty}
+                      </Badge>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSpecialtyInput(specialty);
+                          setIsEditingSpecialty(true);
+                        }}
+                        className="text-[11px] text-muted-foreground hover:text-primary underline ml-1"
+                      >
+                        Alterar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={specialtyInput}
+                        onChange={(e) => setSpecialtyInput(e.target.value)}
+                        placeholder="Digite a especialidade..."
+                        className="h-7 text-xs px-2.5 rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-emerald-500 w-48"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSpecialtySelect(specialtyInput);
+                          } else if (e.key === 'Escape') {
+                            setIsEditingSpecialty(false);
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-7 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => handleSpecialtySelect(specialtyInput)}
+                      >
+                        Salvar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setIsEditingSpecialty(false)}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Chips rápidos de especialidade */}
+                  <div className="flex items-center gap-1 flex-wrap ml-1">
+                    {POPULAR_SPECIALTIES.slice(0, 6).map((spec) => (
+                      <button
+                        key={spec}
+                        type="button"
+                        onClick={() => handleSpecialtySelect(spec)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md border transition-all ${
+                          specialty.toLowerCase() === spec.toLowerCase()
+                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500 font-semibold'
+                            : 'bg-muted/40 hover:bg-muted text-muted-foreground border-transparent'
+                        }`}
+                      >
+                        {spec}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 bg-emerald-500/5 border border-emerald-500/20 rounded-md px-3 py-1.5">
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">💡 Modo Ambulatório:</span>
+                  <span>
+                    Prontuário com Anamnese canônica (ID, HMA, AM, MUC, IS, Hábitos, HPS). A Lista de Problemas e Condutas são geradas pela IA especialista na aba <strong>Conduta</strong>.
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -276,7 +428,13 @@ export function StepAutoNote({
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              Processando fontes e gerando prontuário em modo {activeMode === 'emergencia_uti' ? 'EMERGÊNCIA/UTI' : 'Enfermaria'}...
+              Processando fontes e gerando prontuário em modo{' '}
+              {activeMode === 'emergencia_uti'
+                ? 'EMERGÊNCIA/UTI'
+                : activeMode === 'ambulatorio'
+                ? `AMBULATÓRIO DE ${(specialty || 'CLÍNICA MÉDICA').toUpperCase()}`
+                : 'Enfermaria'}
+              ...
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -314,7 +472,13 @@ export function StepAutoNote({
             <div>
               <CardTitle className="text-base flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
                 <FileText className="w-4 h-4" />
-                Revisar Prontuário Gerado ({activeMode === 'emergencia_uti' ? 'EMERGÊNCIA / UTI' : 'Enfermaria'})
+                Revisar Prontuário Gerado (
+                {activeMode === 'emergencia_uti'
+                  ? 'EMERGÊNCIA / UTI'
+                  : activeMode === 'ambulatorio'
+                  ? `AMBULATÓRIO DE ${(specialty || 'CLÍNICA MÉDICA').toUpperCase()}`
+                  : 'Enfermaria'}
+                )
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
                 Ajuste qualquer dado diretamente no editor antes de salvar.
@@ -388,10 +552,16 @@ export function StepAutoNote({
                   className={`text-[10px] ml-1 ${
                     medicalRecord?.record_mode === 'emergencia_uti'
                       ? 'bg-red-500/10 text-red-600 border border-red-500/20'
+                      : medicalRecord?.record_mode === 'ambulatorio'
+                      ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
                       : 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
                   }`}
                 >
-                  {medicalRecord?.record_mode === 'emergencia_uti' ? '🚨 Emergência/UTI' : '🏥 Enfermaria'}
+                  {medicalRecord?.record_mode === 'emergencia_uti'
+                    ? '🚨 Emergência/UTI'
+                    : medicalRecord?.record_mode === 'ambulatorio'
+                    ? `🩺 Ambulatório • ${patient?.specialty || specialty || 'Clínica Médica'}`
+                    : '🏥 Enfermaria'}
                 </Badge>
               </CardTitle>
             </div>

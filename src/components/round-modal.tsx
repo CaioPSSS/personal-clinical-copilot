@@ -111,7 +111,11 @@ export function RoundModal({
                 <div className="flex items-center gap-2">
                   <span>Versão: v{record.version}</span>
                   <Badge variant="outline" className="text-[10px]">
-                    {record.record_mode === 'emergencia_uti' ? '🚨 Emergência / UTI' : '🏥 Enfermaria'}
+                    {record.record_mode === 'emergencia_uti'
+                      ? '🚨 Emergência / UTI'
+                      : record.record_mode === 'ambulatorio'
+                      ? `🩺 Ambulatório ${patient.specialty ? `(${patient.specialty})` : ''}`
+                      : '🏥 Enfermaria'}
                   </Badge>
                 </div>
                 <span>Última Atualização: {formatDate(record.updated_at)}</span>

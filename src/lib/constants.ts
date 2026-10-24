@@ -1,25 +1,28 @@
-import { EMERGENCY_SECTIONS, WARD_SECTIONS } from './record-templates';
+import { EMERGENCY_SECTIONS, WARD_SECTIONS, OUTPATIENT_SECTIONS } from './record-templates';
 
 export const SECTION_LABELS: Record<string, string> = {
   dados_admissao: 'Dados de Admissão',
-  identificacao: 'Identificação',
+  identificacao: 'ID (Identificação)',
+  id: 'ID (Identificação)',
   lista_problemas: 'Lista de Problemas',
   queixa_principal: 'Queixa Principal',
-  historia_doenca_atual: 'História da Moléstia Atual',
+  historia_doenca_atual: 'História da Moléstia Atual (HMA)',
   hma: 'História da Moléstia Atual (HMA)',
   admissao_sala_vermelha: 'Admissão Sala Vermelha',
-  revisao_de_sistemas: 'Revisão de Sistemas',
-  antecedentes_pessoais: 'Antecedentes Pessoais',
-  antecedentes_obstetricos: 'Antecedentes Obstétricos',
+  revisao_de_sistemas: 'Interrogatório Sistemático (IS)',
+  is: 'Interrogatório Sistemático (IS)',
+  antecedentes_pessoais: 'Antecedentes Médicos (AM)',
   am: 'Antecedentes Médicos (AM)',
+  antecedentes_obstetricos: 'Antecedentes Obstétricos',
   alergias: 'Alergias',
-  medicacoes_em_uso: 'Medicações em Uso',
-  medicacoes_uso_continuo: 'Medicação de Uso Contínuo',
-  muc: 'Medicação de Uso Contínuo (MUC)',
+  medicacoes_em_uso: 'Medicações de Uso Atual (MUC)',
+  medicacoes_uso_continuo: 'Medicações de Uso Contínuo (MUC)',
+  muc: 'Medicações de Uso Atual (MUC)',
   antecedentes_familiares: 'Antecedentes Familiares',
   habitos_de_vida: 'Hábitos de Vida',
-  psicossocial: 'Psicossocial',
-  sinais_vitais: 'Sinais Vitais',
+  psicossocial: 'HPS (História Psicossocial e Familiar)',
+  hps: 'HPS (História Psicossocial e Familiar)',
+  sinais_vitais: 'Sinais Vitais / Antropometria',
   exame_fisico: 'Exame Físico',
   exame_fisico_admissional: 'Exame Físico Admissional',
   evolucao_do_dia: 'Evolução do Dia',
@@ -34,4 +37,4 @@ export const SECTION_LABELS: Record<string, string> = {
   plano_terapeutico: 'Plano Terapêutico',
 };
 
-export { EMERGENCY_SECTIONS, WARD_SECTIONS };
+export { EMERGENCY_SECTIONS, WARD_SECTIONS, OUTPATIENT_SECTIONS };

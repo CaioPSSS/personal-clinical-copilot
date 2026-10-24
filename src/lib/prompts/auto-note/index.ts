@@ -5,21 +5,45 @@ import { PROBLEM_LIST_RULES } from './problem-list';
 import { MEDICAL_ABBREVIATIONS_GUIDE } from './abbreviations';
 import { EMERGENCY_MODE_INSTRUCTIONS } from './mode-emergencia';
 import { WARD_MODE_INSTRUCTIONS } from './mode-enfermaria';
+import {
+  getOutpatientModeInstructions,
+  OUTPATIENT_NOTE_RULES,
+  OUTPATIENT_FEW_SHOT_EXAMPLE,
+} from './mode-ambulatorio';
 import { ANONYMIZED_FEW_SHOT_EXAMPLES } from './examples';
 
 export * from './types';
+export * from './mode-ambulatorio';
 
 /**
  * Constrói o System Prompt modular completo para geração de prontuário.
  */
 export function buildAutoNoteSystemPrompt(ctx: AutoNoteContext): string {
+  let modeSpecificPrompt: string;
+  let formattingRules: string;
+  let fewShotExample: string;
+
+  if (ctx.mode === 'emergencia_uti') {
+    modeSpecificPrompt = EMERGENCY_MODE_INSTRUCTIONS;
+    formattingRules = PROBLEM_LIST_RULES;
+    fewShotExample = ANONYMIZED_FEW_SHOT_EXAMPLES;
+  } else if (ctx.mode === 'ambulatorio') {
+    modeSpecificPrompt = getOutpatientModeInstructions(ctx.patient.specialty);
+    formattingRules = OUTPATIENT_NOTE_RULES;
+    fewShotExample = OUTPATIENT_FEW_SHOT_EXAMPLE;
+  } else {
+    modeSpecificPrompt = WARD_MODE_INSTRUCTIONS;
+    formattingRules = PROBLEM_LIST_RULES;
+    fewShotExample = ANONYMIZED_FEW_SHOT_EXAMPLES;
+  }
+
   const parts: string[] = [
     getBaseSystemInstructions(ctx),
     SOURCE_HIERARCHY_RULES,
-    PROBLEM_LIST_RULES,
+    formattingRules,
     MEDICAL_ABBREVIATIONS_GUIDE,
-    ctx.mode === 'emergencia_uti' ? EMERGENCY_MODE_INSTRUCTIONS : WARD_MODE_INSTRUCTIONS,
-    ANONYMIZED_FEW_SHOT_EXAMPLES,
+    modeSpecificPrompt,
+    fewShotExample,
   ];
 
   return parts.join('\n\n---\n\n');

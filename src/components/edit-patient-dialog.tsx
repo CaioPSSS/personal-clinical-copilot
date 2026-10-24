@@ -35,12 +35,27 @@ export function EditPatientDialog({
 }: EditPatientDialogProps) {
   const [loading, setLoading] = useState(false);
   const [recordMode, setRecordMode] = useState<RecordMode>(patient.record_mode || 'enfermaria');
+  const [specialty, setSpecialty] = useState<string>(patient.specialty || '');
   const [selectedInst, setSelectedInst] = useState<string>(patient.institution || '');
   const [customInst, setCustomInst] = useState<string>('');
   const [isAddingCustom, setIsAddingCustom] = useState<boolean>(false);
 
+  const POPULAR_SPECIALTIES = [
+    'Cardiologia',
+    'Clínica Médica',
+    'Endocrinologia',
+    'Pneumologia',
+    'Gastroenterologia',
+    'Nefrologia',
+    'Reumatologia',
+    'Neurologia',
+    'Geriatria',
+    'Infectologia',
+  ];
+
   useEffect(() => {
     setRecordMode(patient.record_mode || 'enfermaria');
+    setSpecialty(patient.specialty || '');
     setSelectedInst(patient.institution || '');
     setIsAddingCustom(false);
     setCustomInst('');
@@ -151,9 +166,9 @@ export function EditPatientDialog({
             <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
               Modo de Prontuário *
             </Label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <label
-                className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border cursor-pointer text-xs font-medium transition-all ${
                   recordMode === 'enfermaria'
                     ? 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold shadow-sm'
                     : 'border-border hover:bg-muted/50 text-muted-foreground'
@@ -167,11 +182,11 @@ export function EditPatientDialog({
                   onChange={() => setRecordMode('enfermaria')}
                   className="sr-only"
                 />
-                🏥 Modo Enfermaria
+                🏥 Enfermaria
               </label>
 
               <label
-                className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border cursor-pointer text-sm font-medium transition-all ${
+                className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border cursor-pointer text-xs font-medium transition-all ${
                   recordMode === 'emergencia_uti'
                     ? 'border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 font-semibold shadow-sm'
                     : 'border-border hover:bg-muted/50 text-muted-foreground'
@@ -185,9 +200,65 @@ export function EditPatientDialog({
                   onChange={() => setRecordMode('emergencia_uti')}
                   className="sr-only"
                 />
-                🚨 Emergência / UTI
+                🚨 Emergência
+              </label>
+
+              <label
+                className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border cursor-pointer text-xs font-medium transition-all ${
+                  recordMode === 'ambulatorio'
+                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm'
+                    : 'border-border hover:bg-muted/50 text-muted-foreground'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="record_mode"
+                  value="ambulatorio"
+                  checked={recordMode === 'ambulatorio'}
+                  onChange={() => setRecordMode('ambulatorio')}
+                  className="sr-only"
+                />
+                🩺 Ambulatório
               </label>
             </div>
+
+            {/* Campo da Especialidade quando no Modo Ambulatório */}
+            {recordMode === 'ambulatorio' && (
+              <div className="space-y-2 p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 mt-2 animate-fade-in">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="edit_specialty" className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                    Especialidade do Ambulatório *
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground">Ex: Cardiologia, Pneumologia...</span>
+                </div>
+                <Input
+                  id="edit_specialty"
+                  name="specialty"
+                  required={recordMode === 'ambulatorio'}
+                  value={specialty}
+                  onChange={(e) => setSpecialty(e.target.value)}
+                  placeholder="Escreva a especialidade médica..."
+                  className="h-8 text-xs bg-background"
+                />
+                <div className="flex items-center gap-1 flex-wrap pt-1">
+                  <span className="text-[10px] text-muted-foreground mr-1">Sugestões:</span>
+                  {POPULAR_SPECIALTIES.map((spec) => (
+                    <button
+                      key={spec}
+                      type="button"
+                      onClick={() => setSpecialty(spec)}
+                      className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${
+                        specialty.toLowerCase() === spec.toLowerCase()
+                          ? 'bg-emerald-600 text-white border-emerald-600 font-semibold'
+                          : 'bg-background hover:bg-muted text-muted-foreground border-border'
+                      }`}
+                    >
+                      {spec}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -155,6 +155,19 @@ export function PatientWorkspace({
                 {patient.gender}
               </Badge>
             )}
+            {patient.record_mode === 'emergencia_uti' ? (
+              <Badge variant="outline" className="text-[10px] border-red-500/40 text-red-600 bg-red-500/5">
+                🚨 Emergência / UTI
+              </Badge>
+            ) : patient.record_mode === 'ambulatorio' ? (
+              <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5">
+                🩺 Ambulatório {patient.specialty ? `• ${patient.specialty}` : ''}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-[10px] border-blue-500/40 text-blue-600 bg-blue-500/5">
+                🏥 Enfermaria
+              </Badge>
+            )}
             {patient.institution && (
               <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
                 <Building2 className="w-2.5 h-2.5 mr-1" />
@@ -217,6 +230,7 @@ export function PatientWorkspace({
 
         <TabsContent value="evidence" keepMounted>
           <StepEvidence
+            patient={patient}
             patientId={patient.id}
             medicalRecord={medicalRecord}
             evidenceNote={evidenceNote}

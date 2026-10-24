@@ -3,14 +3,16 @@
 -- Execute este script no SQL Editor do painel do Supabase (supabase.com/dashboard)
 -- ==============================================================================
 
--- 1. Tabela PATIENTS: suporte ao modo de atendimento e data de admissão/internação
+-- 1. Tabela PATIENTS: suporte ao modo de atendimento, especialidade ambulatorial e data de admissão/internação
 ALTER TABLE patients 
 ADD COLUMN IF NOT EXISTS record_mode TEXT DEFAULT 'enfermaria',
+ADD COLUMN IF NOT EXISTS specialty TEXT,
 ADD COLUMN IF NOT EXISTS admission_date DATE;
 
--- 2. Tabela MEDICAL_RECORDS: suporte ao modo do prontuário e texto completo monospaçado
+-- 2. Tabela MEDICAL_RECORDS: suporte ao modo do prontuário, especialidade e texto completo monospaçado
 ALTER TABLE medical_records 
 ADD COLUMN IF NOT EXISTS record_mode TEXT DEFAULT 'enfermaria',
+ADD COLUMN IF NOT EXISTS specialty TEXT,
 ADD COLUMN IF NOT EXISTS record_text TEXT;
 
 -- 3. Tabela FILES: suporte à classificação de documentos, OCR e metadados de extração

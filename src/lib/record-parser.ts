@@ -1,5 +1,5 @@
 import { SECTION_LABELS } from './constants';
-import { EMERGENCY_SECTIONS, WARD_SECTIONS } from './record-templates';
+import { EMERGENCY_SECTIONS, WARD_SECTIONS, OUTPATIENT_SECTIONS } from './record-templates';
 import { RecordMode } from './types';
 
 function normalizeTitle(raw: string): string {
@@ -22,8 +22,11 @@ export function identifySectionKey(rawTitle: string): string {
   if (norm.startsWith('lista de problemas') || norm.startsWith('lista problemas') || norm === 'problemas') {
     return 'lista_problemas';
   }
-  if (norm.startsWith('hma') || norm.startsWith('historia da molestia') || norm.startsWith('historia da doenca')) {
-    return 'historia_doenca_atual';
+  if (norm === 'id' || norm.startsWith('identificacao') || norm.startsWith('dados')) {
+    return 'identificacao';
+  }
+  if (norm === 'hma' || norm.startsWith('hma') || norm.startsWith('historia da molestia') || norm.startsWith('historia da doenca')) {
+    return 'hma';
   }
   if (norm.startsWith('admissao sala vermelha') || norm.startsWith('admissao')) {
     return 'admissao_sala_vermelha';
@@ -31,8 +34,8 @@ export function identifySectionKey(rawTitle: string): string {
   if (norm === 'qp' || norm.startsWith('queixa principal')) {
     return 'queixa_principal';
   }
-  if (norm === 'am' || norm.startsWith('antecedentes medicos') || norm.startsWith('antecedentes pessoais')) {
-    return 'antecedentes_pessoais';
+  if (norm === 'am' || norm.startsWith('antecedentes medicos') || norm.startsWith('antecedentes médicos') || norm.startsWith('antecedentes pessoais') || norm.startsWith('antecedentes patologicos')) {
+    return 'am';
   }
   if (norm.startsWith('antecedentes obstetricos')) {
     return 'antecedentes_obstetricos';
@@ -40,17 +43,20 @@ export function identifySectionKey(rawTitle: string): string {
   if (norm.startsWith('antecedentes familiares') || norm === 'af') {
     return 'antecedentes_familiares';
   }
-  if (norm.startsWith('habitos de vida')) {
+  if (norm === 'muc' || norm.startsWith('medicacoes de uso atual') || norm.startsWith('medicações de uso atual') || norm.startsWith('medicacao de uso continuo') || norm.startsWith('medicação de uso contínuo') || norm.startsWith('medicacoes em uso') || norm.startsWith('medicações em uso')) {
+    return 'muc';
+  }
+  if (norm === 'is' || norm.startsWith('interrogatorio sistematico') || norm.startsWith('interrogatório sistemático') || norm.startsWith('revisao de sistemas') || norm.startsWith('revisão de sistemas')) {
+    return 'is';
+  }
+  if (norm.startsWith('habitos de vida') || norm.startsWith('hábitos de vida') || norm.startsWith('estilo de vida')) {
     return 'habitos_de_vida';
   }
-  if (norm.startsWith('psicossocial')) {
-    return 'psicossocial';
+  if (norm === 'hps' || norm.startsWith('hps') || norm.startsWith('psicossocial') || norm.startsWith('historia psicossocial') || norm.startsWith('história psicossocial') || norm.startsWith('antecedentes sociofamiliares')) {
+    return 'hps';
   }
   if (norm === 'alergias' || norm === 'alergia') {
     return 'alergias';
-  }
-  if (norm === 'muc' || norm.startsWith('medicacao de uso continuo') || norm.startsWith('medicacoes em uso')) {
-    return 'medicacoes_uso_continuo';
   }
   if (norm.startsWith('exame fisico admissonal') || norm.startsWith('exame fisico admissional') || norm.startsWith('exame fisico da admissao')) {
     return 'exame_fisico_admissional';
@@ -70,7 +76,7 @@ export function identifySectionKey(rawTitle: string): string {
   if (norm.startsWith('sinais vitais') || norm === 'ssvv') {
     return 'sinais_vitais';
   }
-  if (norm.startsWith('exame fisico')) {
+  if (norm.startsWith('exame fisico') || norm === 'ef') {
     return 'exame_fisico';
   }
   if (norm.startsWith('exames complementares') || norm.startsWith('exames laboratoriais') || norm.startsWith('exames')) {
@@ -78,9 +84,6 @@ export function identifySectionKey(rawTitle: string): string {
   }
   if (norm.startsWith('condutas') || norm.startsWith('conduta') || norm.startsWith('plano terapeutico')) {
     return 'condutas';
-  }
-  if (norm.startsWith('dados') || norm.startsWith('identificacao')) {
-    return 'identificacao';
   }
   if (norm.startsWith('hipoteses') || norm.startsWith('hipóteses')) {
     return 'hipoteses_diagnosticas';
@@ -207,27 +210,72 @@ export function formatRecordDataToText(
 ): string {
   if (!recordData) return '';
 
-  const orderDefs = mode === 'emergencia_uti' ? EMERGENCY_SECTIONS : WARD_SECTIONS;
+  const orderDefs =
+    mode === 'emergencia_uti'
+      ? EMERGENCY_SECTIONS
+      : mode === 'ambulatorio'
+      ? OUTPATIENT_SECTIONS
+      : WARD_SECTIONS;
   const processedKeys = new Set<string>();
   const outputBlocks: string[] = [];
 
   // 1. Inserir cabeçalho / identificação primeiro se existir
-  if (recordData['identificacao'] || recordData['dados_admissao']) {
-    const headerVal = recordData['identificacao'] || recordData['dados_admissao'];
+  if (recordData['identificacao'] || recordData['dados_admissao'] || recordData['id']) {
+    const headerVal = recordData['identificacao'] || recordData['dados_admissao'] || recordData['id'];
     if (headerVal && headerVal !== 'Não informado' && headerVal !== 'N/A') {
-      outputBlocks.push(headerVal);
+      if (mode === 'ambulatorio') {
+        outputBlocks.push(`#ID:\n${headerVal}`);
+      } else {
+        outputBlocks.push(headerVal);
+      }
       processedKeys.add('identificacao');
       processedKeys.add('dados_admissao');
+      processedKeys.add('id');
     }
   }
 
   // 2. Inserir as seções conhecidas na ordem recomendada do modo
   for (const sec of orderDefs) {
-    const val = recordData[sec.key];
+    if (processedKeys.has(sec.key)) continue;
+
+    // Buscar valor tanto pela chave principal quanto por aliases comuns
+    let val = recordData[sec.key];
+    if (!val) {
+      if (sec.key === 'hma') val = recordData['historia_doenca_atual'] || recordData['queixa_principal'];
+      else if (sec.key === 'historia_doenca_atual') val = recordData['hma'];
+      else if (sec.key === 'am') val = recordData['antecedentes_pessoais'];
+      else if (sec.key === 'antecedentes_pessoais') val = recordData['am'];
+      else if (sec.key === 'muc') val = recordData['medicacoes_em_uso'] || recordData['medicacoes_uso_continuo'];
+      else if (sec.key === 'medicacoes_em_uso' || sec.key === 'medicacoes_uso_continuo') val = recordData['muc'];
+      else if (sec.key === 'is') val = recordData['revisao_de_sistemas'];
+      else if (sec.key === 'revisao_de_sistemas') val = recordData['is'];
+      else if (sec.key === 'hps') val = recordData['psicossocial'] || recordData['antecedentes_familiares'];
+      else if (sec.key === 'psicossocial') val = recordData['hps'];
+    }
+
     if (val && val !== 'Não informado' && val !== 'N/A') {
-      const prefix = mode === 'emergencia_uti' ? `#${sec.title}:` : `## ${sec.title}`;
+      const prefix = mode === 'enfermaria' ? `## ${sec.title}` : `#${sec.title}:`;
       outputBlocks.push(`${prefix}\n${val}`);
       processedKeys.add(sec.key);
+      if (sec.key === 'hma') {
+        processedKeys.add('historia_doenca_atual');
+        processedKeys.add('queixa_principal');
+      }
+      if (sec.key === 'historia_doenca_atual') processedKeys.add('hma');
+      if (sec.key === 'am') processedKeys.add('antecedentes_pessoais');
+      if (sec.key === 'antecedentes_pessoais') processedKeys.add('am');
+      if (sec.key === 'muc') {
+        processedKeys.add('medicacoes_em_uso');
+        processedKeys.add('medicacoes_uso_continuo');
+      }
+      if (sec.key === 'medicacoes_em_uso' || sec.key === 'medicacoes_uso_continuo') processedKeys.add('muc');
+      if (sec.key === 'is') processedKeys.add('revisao_de_sistemas');
+      if (sec.key === 'revisao_de_sistemas') processedKeys.add('is');
+      if (sec.key === 'hps') {
+        processedKeys.add('psicossocial');
+        processedKeys.add('antecedentes_familiares');
+      }
+      if (sec.key === 'psicossocial') processedKeys.add('hps');
     }
   }
 
@@ -236,7 +284,7 @@ export function formatRecordDataToText(
     if (processedKeys.has(key)) continue;
     if (val && val !== 'Não informado' && val !== 'N/A') {
       const label = SECTION_LABELS[key] || key.replace(/_/g, ' ').toUpperCase();
-      const prefix = mode === 'emergencia_uti' ? `#${label}:` : `## ${label}`;
+      const prefix = mode === 'enfermaria' ? `## ${label}` : `#${label}:`;
       outputBlocks.push(`${prefix}\n${val}`);
     }
   }

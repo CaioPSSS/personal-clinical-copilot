@@ -5,7 +5,7 @@ import { RecordMode } from '@/lib/types';
 
 export async function POST(req: NextRequest) {
   try {
-    const { patientId, text, recordMode, hasTranscriptions, fileIds } = await req.json();
+    const { patientId, text, recordMode, specialty, hasTranscriptions, fileIds } = await req.json();
 
     const supabase = await createClient();
     const {
@@ -43,16 +43,19 @@ export async function POST(req: NextRequest) {
           record_text: text,
           record_data: recordData,
           record_mode: (recordMode as RecordMode) || 'enfermaria',
+          specialty: specialty || null,
           version: newVersion,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id);
 
-      if (updateErr && updateErr.message?.includes('schema cache')) {
+      if (updateErr && (updateErr.message?.includes('schema cache') || updateErr.message?.includes('specialty'))) {
         await supabase
           .from('medical_records')
           .update({
+            record_text: text,
             record_data: recordData,
+            record_mode: (recordMode as RecordMode) || 'enfermaria',
             version: newVersion,
             updated_at: new Date().toISOString(),
           })
@@ -65,14 +68,17 @@ export async function POST(req: NextRequest) {
         record_text: text,
         record_data: recordData,
         record_mode: (recordMode as RecordMode) || 'enfermaria',
+        specialty: specialty || null,
         version: 1,
       });
 
-      if (insertErr && insertErr.message?.includes('schema cache')) {
+      if (insertErr && (insertErr.message?.includes('schema cache') || insertErr.message?.includes('specialty'))) {
         await supabase.from('medical_records').insert({
           user_id: user.id,
           patient_id: patientId,
+          record_text: text,
           record_data: recordData,
+          record_mode: (recordMode as RecordMode) || 'enfermaria',
           version: 1,
         });
       }
